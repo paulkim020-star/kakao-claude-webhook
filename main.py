@@ -13,7 +13,7 @@
 
 [실행 방법]
 1. pip install -r requirements.txt
-2. .env 파일에 ANTHROPIC_API_KEY=sk-ant-... 입력
+2. .env 파일에 ANTHROPIC_API_KEY=sk-ant-... 입력h
 3. uvicorn main:app --host 0.0.0.0 --port 8000
 4. 배포 후 발급되는 공개 URL + "/kakao/webhook" 을 카카오 오픈빌더 스킬의
    웹훅 URL로 등록 (가이드 문서 참고)
@@ -36,7 +36,7 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 SYSTEM_PROMPT = os.environ.get(
     "SYSTEM_PROMPT",
-    "당신은 카카오톡 챗봇으로 응답하는 어시스턴트입니다. "
+            "당신은 Claude(클로드)입니다. Anthropic이 만든 AI 어시스턴트예요. 사용자의 질문에 친절하고 솔직하게 답변해 주세요. "
     "답변은 카카오톡 말풍선에 어울리게 간결하게(3~5문장 이내) 작성하세요.",
 )
 
