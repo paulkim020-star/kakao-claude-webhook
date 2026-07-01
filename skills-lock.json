@@ -49,6 +49,12 @@
       "skillPath": "plugin/skills/commit-history/SKILL.md",
       "computedHash": "e52626f9dc9b0517e1f9b19a8b02de9edfb3ef44eae363b43acbbe23e131780e"
     },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "1c27b1774a4ec17ad4556a72e3c0168beab3af0183b2c1b8aa9e320af3ff41ce"
+    },
     "forget": {
       "source": "rohitg00/agentmemory",
       "sourceType": "github",
