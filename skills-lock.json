@@ -61,11 +61,23 @@
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
     },
+    "grammar-checker": {
+      "source": "DaleSeo/korean-skills",
+      "sourceType": "github",
+      "skillPath": "skills/grammar-checker/SKILL.md",
+      "computedHash": "93f311dd6643b51595559c9daff070fb77d7a2bc6e68acc61099d982f1e5acd9"
+    },
     "handoff": {
       "source": "rohitg00/agentmemory",
       "sourceType": "github",
       "skillPath": "plugin/skills/handoff/SKILL.md",
       "computedHash": "931d304bdff93a99ccb25ea1166d8efa1550ca5428fb209dd44fdd0e652e5b63"
+    },
+    "humanizer": {
+      "source": "DaleSeo/korean-skills",
+      "sourceType": "github",
+      "skillPath": "skills/humanizer/SKILL.md",
+      "computedHash": "dc8142371cd68f33c8264f9b63cfb35356bb8605b9fe10cabed62be96329213b"
     },
     "recall": {
       "source": "rohitg00/agentmemory",
@@ -90,6 +102,12 @@
       "sourceType": "github",
       "skillPath": "plugin/skills/session-history/SKILL.md",
       "computedHash": "ece45f2f4db16fa213f2f46ddfdba271a4281f9ba0d0bcec69ac5e7d0075c0a7"
+    },
+    "style-guide": {
+      "source": "DaleSeo/korean-skills",
+      "sourceType": "github",
+      "skillPath": "skills/style-guide/SKILL.md",
+      "computedHash": "9b99a285407047b57555388abfa42ded261b0e07a0751d38575f580b0669b462"
     },
     "understand": {
       "source": "Egonex-AI/Understand-Anything",
