@@ -139,6 +139,12 @@
       "skillPath": "understand-anything-plugin/skills/understand-onboard/SKILL.md",
       "computedHash": "f486302a95dd1e871c5f1ac1dba1d87b8b40e61802fffedead5d203676fdc771"
     },
+    "watch": {
+      "source": "bradautomates/claude-video",
+      "sourceType": "github",
+      "skillPath": "skills/watch/SKILL.md",
+      "computedHash": "657d2765e3c2e2d91fb18bbda0e5f64221543fa9731539a692017d234399fbf3"
+    },
     "write-agentmemory-skill": {
       "source": "rohitg00/agentmemory",
       "sourceType": "github",
