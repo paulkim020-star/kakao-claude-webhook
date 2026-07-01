@@ -67,6 +67,12 @@
       "skillPath": "plugin/skills/handoff/SKILL.md",
       "computedHash": "931d304bdff93a99ccb25ea1166d8efa1550ca5428fb209dd44fdd0e652e5b63"
     },
+    "humanizer": {
+      "source": "DaleSeo/korean-skills",
+      "sourceType": "github",
+      "skillPath": "skills/humanizer/SKILL.md",
+      "computedHash": "dc8142371cd68f33c8264f9b63cfb35356bb8605b9fe10cabed62be96329213b"
+    },
     "recall": {
       "source": "rohitg00/agentmemory",
       "sourceType": "github",
