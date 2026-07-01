@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "skills": {
+    "agentmemory-agents": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/agentmemory-agents/SKILL.md",
+      "computedHash": "c9969fcd8c7255ef684568697c6baf890b07e407f6575f7bbcd7c97724f33160"
+    },
+    "agentmemory-architecture": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/agentmemory-architecture/SKILL.md",
+      "computedHash": "573b1b8de203f039791ac2716459fc63bbd35b90b1634fd99cd08d2c13fa6368"
+    },
+    "agentmemory-config": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/agentmemory-config/SKILL.md",
+      "computedHash": "7ce6efc42dcdc8a12e3de7683ea2bc4ab3b59ac25b6e850adf5eee0edd940d01"
+    },
+    "agentmemory-hooks": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/agentmemory-hooks/SKILL.md",
+      "computedHash": "b421751543c0484da5559fdf74cab2c758f6d94ecba022657f19be0f93fa2efb"
+    },
+    "agentmemory-mcp-tools": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/agentmemory-mcp-tools/SKILL.md",
+      "computedHash": "e0e3c931226bdb3a7a314c89c635434b7e57bc3bc0a3b9cbc240a6413db134c7"
+    },
+    "agentmemory-rest-api": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/agentmemory-rest-api/SKILL.md",
+      "computedHash": "d7b8e6430f06e3adc7dc404fcb1044b454cbf1e9b43477c734d038e87f6aad4b"
+    },
+    "commit-context": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/commit-context/SKILL.md",
+      "computedHash": "3de145b977f4c14b411ba69623fb6da046895954c309488b271ac7b5a37b1fa9"
+    },
+    "commit-history": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/commit-history/SKILL.md",
+      "computedHash": "e52626f9dc9b0517e1f9b19a8b02de9edfb3ef44eae363b43acbbe23e131780e"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "1c27b1774a4ec17ad4556a72e3c0168beab3af0183b2c1b8aa9e320af3ff41ce"
+    },
+    "forget": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/forget/SKILL.md",
+      "computedHash": "0aecb46743b0b06de5c4d70af1cef72dc1ca22fc3c9c579b418855b6d6c2d485"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
+    },
+    "grammar-checker": {
+      "source": "DaleSeo/korean-skills",
+      "sourceType": "github",
+      "skillPath": "skills/grammar-checker/SKILL.md",
+      "computedHash": "93f311dd6643b51595559c9daff070fb77d7a2bc6e68acc61099d982f1e5acd9"
+    },
+    "handoff": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/handoff/SKILL.md",
+      "computedHash": "931d304bdff93a99ccb25ea1166d8efa1550ca5428fb209dd44fdd0e652e5b63"
+    },
+    "humanizer": {
+      "source": "DaleSeo/korean-skills",
+      "sourceType": "github",
+      "skillPath": "skills/humanizer/SKILL.md",
+      "computedHash": "dc8142371cd68f33c8264f9b63cfb35356bb8605b9fe10cabed62be96329213b"
+    },
+    "recall": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/recall/SKILL.md",
+      "computedHash": "51f8b97fa0d49f069ee34c91763d09643189fa60b1f5cb91ad950d9698916997"
+    },
+    "recap": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/recap/SKILL.md",
+      "computedHash": "172c06de68fef1d41362293467f7bafb4608563af3774fac0f12f85eef8b4a65"
+    },
+    "remember": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/remember/SKILL.md",
+      "computedHash": "80b9016df4b9e8ff2632f8e1ddc5172af1696564cdcb3ed63b36e8d8bff6ef70"
+    },
+    "session-history": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/session-history/SKILL.md",
+      "computedHash": "ece45f2f4db16fa213f2f46ddfdba271a4281f9ba0d0bcec69ac5e7d0075c0a7"
+    },
+    "style-guide": {
+      "source": "DaleSeo/korean-skills",
+      "sourceType": "github",
+      "skillPath": "skills/style-guide/SKILL.md",
+      "computedHash": "9b99a285407047b57555388abfa42ded261b0e07a0751d38575f580b0669b462"
+    },
+    "understand": {
+      "source": "Egonex-AI/Understand-Anything",
+      "sourceType": "github",
+      "skillPath": "understand-anything-plugin/skills/understand/SKILL.md",
+      "computedHash": "46eceb289f02c178fd67c2c87b37d10b584a839a9836c503e11f2331462e7006"
+    },
+    "understand-chat": {
+      "source": "Egonex-AI/Understand-Anything",
+      "sourceType": "github",
+      "skillPath": "understand-anything-plugin/skills/understand-chat/SKILL.md",
+      "computedHash": "3cec7cc6b02177b29d359c3889e311a3985314c61ef7a654ed6c22d43e44b080"
+    },
+    "understand-dashboard": {
+      "source": "Egonex-AI/Understand-Anything",
+      "sourceType": "github",
+      "skillPath": "understand-anything-plugin/skills/understand-dashboard/SKILL.md",
+      "computedHash": "32771fb738e732febba2c780df113354fdc08085aee73e6531ded3e0ad17ee29"
+    },
+    "understand-diff": {
+      "source": "Egonex-AI/Understand-Anything",
+      "sourceType": "github",
+      "skillPath": "understand-anything-plugin/skills/understand-diff/SKILL.md",
+      "computedHash": "e258781324eaab144a9340c32ea2a49f7584ec7b5984121e11dcffe16fbee03c"
+    },
+    "understand-domain": {
+      "source": "Egonex-AI/Understand-Anything",
+      "sourceType": "github",
+      "skillPath": "understand-anything-plugin/skills/understand-domain/SKILL.md",
+      "computedHash": "493ad301cd52ddc35f883dd990db0ea683abf84d8bae893da38707c35a22fe0c"
+    },
+    "understand-explain": {
+      "source": "Egonex-AI/Understand-Anything",
+      "sourceType": "github",
+      "skillPath": "understand-anything-plugin/skills/understand-explain/SKILL.md",
+      "computedHash": "8f6ef8bc8d4be5e0e8dd764c0d4c5a42b95fa47191e22edbb5ccc351828af7b6"
+    },
+    "understand-knowledge": {
+      "source": "Egonex-AI/Understand-Anything",
+      "sourceType": "github",
+      "skillPath": "understand-anything-plugin/skills/understand-knowledge/SKILL.md",
+      "computedHash": "91643a1d1c6657229ac9f93511cd155dcffed4ebc4647e51962dacf69905c990"
+    },
+    "understand-onboard": {
+      "source": "Egonex-AI/Understand-Anything",
+      "sourceType": "github",
+      "skillPath": "understand-anything-plugin/skills/understand-onboard/SKILL.md",
+      "computedHash": "f486302a95dd1e871c5f1ac1dba1d87b8b40e61802fffedead5d203676fdc771"
+    },
+    "watch": {
+      "source": "bradautomates/claude-video",
+      "sourceType": "github",
+      "skillPath": "skills/watch/SKILL.md",
+      "computedHash": "657d2765e3c2e2d91fb18bbda0e5f64221543fa9731539a692017d234399fbf3"
+    },
+    "write-agentmemory-skill": {
+      "source": "rohitg00/agentmemory",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/write-agentmemory-skill/SKILL.md",
+      "computedHash": "4d1423b3d289ad2cb136c0b760be204f18268b67190983d3874b02e90f4c4298"
+    }
+  }
+}
