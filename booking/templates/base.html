@@ -5,85 +5,91 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ shop_name }} 예약</title>
 <style>
+  /* 팔레트: 다크 네이비(#16324f) + 머스터드 옐로우(#f5b301) + 아이보리 배경 */
   * { box-sizing: border-box; margin: 0; }
   body { font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-         background: linear-gradient(160deg, #fdf2f8 0%, #f3e8ff 55%, #e0f2fe 100%) fixed;
-         color: #3d2b3f; }
+         background: #faf6ec; color: #22303f; }
   .wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
-  header { padding: 22px 4px 6px; }
-  header h1 { font-size: 24px; letter-spacing: -0.5px; }
-  header h1 a { text-decoration: none;
-         background: linear-gradient(90deg, #ec4899, #8b5cf6);
-         -webkit-background-clip: text; background-clip: text; color: transparent; }
-  header .tagline { color: #b06aa8; font-size: 13px; margin-top: 4px; font-weight: 600; }
-  header .account { margin-top: 6px; font-size: 13px; color: #8b7a8e; }
-  header .account a { color: #8b5cf6; font-weight: 600; }
-  .card { background: rgba(255,255,255,.92); border-radius: 18px; padding: 18px;
-          margin-top: 14px; box-shadow: 0 6px 18px rgba(196, 77, 255, .10);
-          border: 1px solid #fce7f3; }
-  .card h2 { font-size: 17px; margin-bottom: 8px; color: #86198f; }
-  .muted { color: #9b8aa0; font-size: 13px; }
-  .price { font-weight: 800; color: #ec4899; }
-  .notice { background: linear-gradient(90deg, #fef9c3, #fef3c7); border-radius: 12px;
-            padding: 11px 14px; font-size: 13px; color: #854d0e; margin-top: 14px;
-            border: 1px solid #fde68a; }
+  header { padding: 22px 4px 10px; }
+  header h1 { font-size: 24px; letter-spacing: -0.5px; display: inline-block; }
+  header h1 a { color: #16324f; text-decoration: none;
+         border-bottom: 4px solid #f5b301; padding-bottom: 2px; }
+  header .tagline { color: #a07c1f; font-size: 13px; margin-top: 8px; font-weight: 600; }
+  header .account { margin-top: 6px; font-size: 13px; color: #6b7684; }
+  header .account a { color: #16324f; font-weight: 700; }
+  .card { background: #fff; border-radius: 14px; padding: 18px; margin-top: 14px;
+          box-shadow: 0 2px 10px rgba(22, 50, 79, .08); border: 1px solid #f0e6cf; }
+  .card h2 { font-size: 17px; margin-bottom: 8px; color: #16324f; }
+  .muted { color: #8a919c; font-size: 13px; }
+  .price { font-weight: 800; color: #b07d00; }
+  .notice { background: #fdf3d1; border-radius: 10px; padding: 11px 14px;
+            font-size: 13px; color: #7a5c00; margin-top: 14px;
+            border-left: 4px solid #f5b301; }
   .btn { display: block; width: 100%; text-align: center; padding: 14px;
-         border-radius: 14px; border: 0; font-size: 15px; font-weight: 700;
-         background: linear-gradient(135deg, #ec4899, #8b5cf6); color: #fff;
-         text-decoration: none; cursor: pointer;
-         box-shadow: 0 4px 14px rgba(236, 72, 153, .35); }
-  .btn.secondary { background: #fff; color: #ec4899; border: 2px solid #f9a8d4;
-         box-shadow: none; }
+         border-radius: 12px; border: 0; font-size: 15px; font-weight: 700;
+         background: #16324f; color: #fff; text-decoration: none; cursor: pointer; }
+  .btn:active { background: #0f2438; }
+  .btn.secondary { background: #fff; color: #16324f; border: 2px solid #16324f; }
   .btn + .btn { margin-top: 10px; }
   .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .slots a, .slots button { display: block; width: 100%; text-align: center;
-         padding: 11px 0; border-radius: 12px; border: 2px solid #f9a8d4;
-         background: #fff; color: #be185d; font-size: 14px; font-weight: 700;
+         padding: 11px 0; border-radius: 10px; border: 1.5px solid #c9d3dd;
+         background: #fff; color: #16324f; font-size: 14px; font-weight: 700;
          text-decoration: none; cursor: pointer; }
-  .slots a:active, .slots button:active { background: #fdf2f8; }
-  label { display: block; font-size: 13px; color: #a855f7; font-weight: 700;
+  .slots a:hover, .slots button:hover,
+  .slots a:active, .slots button:active { background: #f5b301; border-color: #f5b301; }
+  label { display: block; font-size: 13px; color: #16324f; font-weight: 700;
           margin: 14px 0 5px; }
   input[type=text], input[type=tel], input[type=date], input[type=file],
   textarea, select {
-         width: 100%; padding: 12px; border: 2px solid #f3e8ff; border-radius: 12px;
-         font-size: 15px; background: #fff; color: #3d2b3f; }
-  input:focus, textarea:focus, select:focus { outline: none; border-color: #d8b4fe; }
-  .error { background: #ffe4e6; color: #be123c; border-radius: 12px;
+         width: 100%; padding: 12px; border: 1.5px solid #d8dee5; border-radius: 10px;
+         font-size: 15px; background: #fff; color: #22303f; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: #f5b301; }
+  .error { background: #fdecec; color: #b3261e; border-radius: 10px;
            padding: 11px 14px; font-size: 13px; margin-top: 14px;
-           border: 1px solid #fecdd3; }
-  .success { background: #d1fae5; color: #047857; border-radius: 12px;
+           border-left: 4px solid #d9534f; }
+  .success { background: #e8f3ea; color: #1e6b34; border-radius: 10px;
              padding: 11px 14px; font-size: 13px; margin-top: 14px;
-             border: 1px solid #a7f3d0; }
+             border-left: 4px solid #3d9b57; }
   .row { display: flex; justify-content: space-between; padding: 7px 0;
-         font-size: 14px; border-bottom: 1px dashed #f3e8ff; }
+         font-size: 14px; border-bottom: 1px solid #f4efe2; }
   .row:last-child { border-bottom: 0; }
-  .row .k { color: #b06aa8; font-weight: 600; }
+  .row .k { color: #8a919c; font-weight: 600; }
   .code { font-size: 30px; font-weight: 900; letter-spacing: 5px; text-align: center;
-          padding: 14px 0; background: linear-gradient(90deg, #ec4899, #8b5cf6);
-          -webkit-background-clip: text; background-clip: text; color: transparent; }
+          padding: 14px 0; color: #16324f;
+          background: #fdf3d1; border-radius: 12px; margin-top: 8px; }
   footer { padding: 24px 0; text-align: center; }
-  footer a { color: #a855f7; font-size: 13px; font-weight: 600; }
+  footer a { color: #16324f; font-size: 13px; font-weight: 600; }
+
+  /* PC(웹) 화면: 폭을 넓혀 시원하게 */
+  @media (min-width: 768px) {
+    .wrap { max-width: 760px; padding: 24px; }
+    header h1 { font-size: 30px; }
+    .slots { grid-template-columns: repeat(7, 1fr); }
+    .btn { max-width: 420px; margin-left: auto; margin-right: auto; }
+    .btn + .btn { margin-top: 10px; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1><a href="/booking">💇‍♀️ {{ shop_name }}</a></h1>
-    <p class="tagline">✂️ 1인샵 · 100% 예약제 · 노쇼 없는 살롱 💕</p>
+    <h1><a href="/booking">✂️ {{ shop_name }}</a></h1>
+    <p class="tagline">1인샵 · 100% 예약제</p>
     <p class="account">
       {% if customer %}
         <b>{{ customer['nickname'] }}</b>님 ·
         <a href="/booking/my">내 예약</a> ·
-        <a href="/booking/logout" style="color:#c4b5fd">로그아웃</a>
+        <a href="/booking/logout" style="color:#8a919c">로그아웃</a>
       {% else %}
-        <a href="/booking/login">⚡ 간편 로그인</a>
+        <a href="/booking/login">간편 로그인</a>
       {% endif %}
     </p>
   </header>
-  {% if error %}<div class="error">⚠️ {{ error }}</div>{% endif %}
-  {% if message %}<div class="success">✅ {{ message }}</div>{% endif %}
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  {% if message %}<div class="success">{{ message }}</div>{% endif %}
   {% block content %}{% endblock %}
-  <footer><a href="/booking/lookup">🔍 내 예약 조회 · 변경 · 취소</a></footer>
+  <footer><a href="/booking/lookup">내 예약 조회 · 변경 · 취소</a></footer>
 </div>
 </body>
 </html>
