@@ -9,10 +9,15 @@ with the Claude API. Flow: KakaoTalk user message -> Kakao Open Builder -> POST
 `/kakao/webhook` -> this server calls Claude -> response is wrapped in Kakao's
 skill response JSON format (`simpleText`) and returned.
 
-- `main.py` - the entire server (FastAPI app, Kakao payload parsing, Claude call,
-  in-memory per-user conversation history).
+- `main.py` - FastAPI app entry point (Kakao payload parsing, Claude call,
+  in-memory per-user conversation history, booking router mounting).
+- `booking/` - 미용실(1인샵) 예약 시스템 모듈. SQLite 기반. 고객용 예약 웹
+  (`/booking`), 관리자 웹 (`/admin`, HTTP Basic - `ADMIN_PASSWORD` env),
+  슬롯 계산/충돌 방지(`engine.py`), 리마인드 알림 스케줄러(`notify.py`).
+  기획 배경은 `docs/살롱예약시스템-기획안.md` 참고.
+- `tests/` - pytest 테스트 (슬롯 계산, 예약 충돌, 웹 플로우).
 - `requirements.txt` - pinned dependencies (fastapi, uvicorn, anthropic, httpx,
-  python-dotenv).
+  python-dotenv, jinja2, python-multipart).
 
 ### Running locally
 
@@ -20,7 +25,12 @@ skill response JSON format (`simpleText`) and returned.
 pip install -r requirements.txt
 # .env with ANTHROPIC_API_KEY=sk-ant-...
 uvicorn main:app --host 0.0.0.0 --port 8000
+# tests: pip install -r requirements-dev.txt && pytest
 ```
+
+Booking env vars: `BOOKING_DB` (SQLite path, default `booking.db`),
+`ADMIN_PASSWORD` (admin Basic auth), `BOOKING_BASE_URL` (챗봇이 안내하는
+예약 페이지 공개 URL).
 
 ### Key constraints to keep in mind
 

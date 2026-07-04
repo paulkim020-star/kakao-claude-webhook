@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>내 예약 조회</h2>
+    <form method="post" action="/booking/lookup">
+      <label>예약번호</label>
+      <input type="text" name="code" required maxlength="6" placeholder="예: A3B7K2" style="text-transform:uppercase">
+      <label>휴대폰 번호</label>
+      <input type="tel" name="phone" required placeholder="010-0000-0000">
+      <div style="margin-top:14px"><button class="btn" type="submit">조회하기</button></div>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    {% if change_mode %}
+      <h2>새 시간을 선택해 주세요</h2>
+      <p class="muted">{{ service['name'] }} · {{ service['duration_min'] }}분 · 예약번호 {{ code }}</p>
+    {% else %}
+      <h2>날짜와 시간을 선택해 주세요</h2>
+      <p class="muted">{{ service['name'] }} · {{ service['duration_min'] }}분 ·
+        {{ "{:,}".format(service['base_price']) }}원{% if service['extra_charge_note'] %}~ ({{ service['extra_charge_note'] }}){% endif %}</p>
+    {% endif %}
+    <form method="get" action="{{ '/booking/change' if change_mode else '/booking/time' }}">
+      {% if change_mode %}
+        <input type="hidden" name="code" value="{{ code }}">
+        <input type="hidden" name="phone" value="{{ phone }}">
+      {% else %}
+        <input type="hidden" name="service_id" value="{{ service['id'] }}">
+      {% endif %}
+      <label>날짜</label>
+      <input type="date" name="date" value="{{ date }}" min="{{ today }}" onchange="this.form.submit()">
+    </form>
+  </div>
+  <div class="card">
+    {% if slots %}
+      <h2>예약 가능 시간</h2>
+      <div class="slots" style="margin-top:10px">
+        {% for t in slots %}
+          {% if change_mode %}
+            <form method="post" action="/booking/change">
+              <input type="hidden" name="code" value="{{ code }}">
+              <input type="hidden" name="phone" value="{{ phone }}">
+              <input type="hidden" name="new_start" value="{{ date }}T{{ t }}">
+              <button type="submit">{{ t }}</button>
+            </form>
+          {% else %}
+            <a href="/booking/form?service_id={{ service['id'] }}&start={{ date }}T{{ t }}">{{ t }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <h2>예약 가능한 시간이 없어요</h2>
+      <p class="muted">휴무일이거나 예약이 모두 찼습니다. 다른 날짜를 선택해 주세요.</p>
+    {% endif %}
+  </div>
+{% endblock %}

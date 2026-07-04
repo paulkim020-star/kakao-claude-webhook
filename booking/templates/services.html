@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>시술을 선택해 주세요</h2>
+    <p class="muted">가격과 소요시간, 추가금 조건을 미리 확인하실 수 있어요.</p>
+  </div>
+  {% for s in services %}
+  <div class="card">
+    <div class="row"><span><b>{{ s['name'] }}</b> <span class="muted">{{ s['duration_min'] }}분</span></span>
+      <span class="price">{{ "{:,}".format(s['base_price']) }}원{% if s['extra_charge_note'] %}~{% endif %}</span></div>
+    {% if s['extra_charge_note'] %}<p class="muted">추가금: {{ s['extra_charge_note'] }}</p>{% endif %}
+    <div style="margin-top:10px">
+      <a class="btn" href="/booking/time?service_id={{ s['id'] }}">이 시술로 예약</a>
+    </div>
+  </div>
+  {% endfor %}
+  <div class="notice">예약 시간 {{ config['cancel_deadline_hours'] }}시간 전까지는 무료로 변경·취소하실 수 있어요.</div>
+{% endblock %}
