@@ -221,3 +221,81 @@ def test_webhook_booking_intent(client):
     res = client.post("/kakao/webhook", json=payload)
     text = res.json()["template"]["outputs"][0]["simpleText"]["text"]
     assert "/booking" in text
+
+
+# ---------- 소셜 로그인 ----------
+
+def test_session_cookie_sign_and_tamper():
+    from booking import auth
+
+    value = auth.make_session_value(42)
+    assert auth.parse_session_value(value) == 42
+    assert auth.parse_session_value("43:" + value.split(":")[1]) is None  # 위조
+    assert auth.parse_session_value(None) is None
+    assert auth.parse_session_value("garbage") is None
+
+
+def test_upsert_customer_is_idempotent(conn):
+    from booking import auth
+
+    first = auth.upsert_customer(conn, "kakao", "uid-1", "닉네임")
+    second = auth.upsert_customer(conn, "kakao", "uid-1", "새닉네임")
+    assert first == second
+    row = conn.execute("SELECT * FROM customer WHERE id = ?", (first,)).fetchone()
+    assert row["nickname"] == "새닉네임"
+
+
+def test_login_page_without_providers(client, monkeypatch):
+    from booking import auth
+
+    monkeypatch.setattr(auth, "KAKAO_CLIENT_ID", "")
+    monkeypatch.setattr(auth, "NAVER_CLIENT_ID", "")
+    res = client.get("/booking/login")
+    assert res.status_code == 200 and "준비되지 않았어요" in res.text
+
+
+def test_social_login_flow_links_reservations(client, monkeypatch):
+    from booking import auth
+
+    monkeypatch.setattr(auth, "KAKAO_CLIENT_ID", "test-key")
+    monkeypatch.setattr(auth, "_exchange", lambda p, c, s: ("kakao-uid-7", "테스트고객"))
+
+    # 로그인 시작 → 카카오 인가 페이지로 리다이렉트 + state 쿠키
+    res = client.get("/booking/login/kakao", follow_redirects=False)
+    assert res.status_code == 307 and "kauth.kakao.com" in res.headers["location"]
+    state = res.headers["location"].split("state=")[1]
+
+    # 콜백 → 세션 쿠키 발급 + 내 예약으로 이동
+    res = client.get(
+        f"/booking/login/kakao/callback?code=dummy&state={state}",
+        follow_redirects=False,
+    )
+    assert res.status_code == 303 and res.headers["location"] == "/booking/my"
+    assert auth.SESSION_COOKIE in client.cookies
+
+    # 로그인 상태로 예약 → customer_id가 연결됨
+    date = _future_open_date()
+    res = client.post("/booking/reserve", data={
+        "service_id": 1, "start": f"{date}T11:00",
+        "customer_name": "테스트고객", "phone": "010-2222-1111", "request_note": "",
+    })
+    assert "예약이 확정되었습니다" in res.text
+
+    conn = db.get_conn()
+    row = conn.execute(
+        "SELECT r.customer_id, r.code, c.provider_uid FROM reservation r"
+        " JOIN customer c ON c.id = r.customer_id WHERE r.phone = '01022221111'"
+    ).fetchone()
+    conn.close()
+    assert row["provider_uid"] == "kakao-uid-7"
+
+    # 내 예약 목록/상세에 예약번호 입력 없이 접근 가능
+    res = client.get("/booking/my")
+    assert res.status_code == 200 and row["code"] in res.text
+    res = client.get(f"/booking/my/{row['code']}")
+    assert res.status_code == 200 and "예약 정보" in res.text
+
+    # 로그아웃하면 내 예약은 로그인 페이지로
+    client.get("/booking/logout")
+    res = client.get("/booking/my", follow_redirects=False)
+    assert res.status_code == 303 and res.headers["location"] == "/booking/login"

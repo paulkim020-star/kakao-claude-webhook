@@ -141,6 +141,7 @@ def create_reservation(
     request_note: str,
     start_str: str,  # 'YYYY-MM-DDTHH:MM'
     source: str = "web",
+    customer_id: int | None = None,  # 소셜 로그인 고객이면 연결
     now: datetime | None = None,
 ) -> sqlite3.Row:
     now = now or now_kst()
@@ -174,8 +175,8 @@ def create_reservation(
 
         cur = conn.execute(
             "INSERT INTO reservation (code, service_id, customer_name, phone,"
-            " request_note, start_at, end_at, source, created_at)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " request_note, start_at, end_at, source, customer_id, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 code,
                 service_id,
@@ -185,6 +186,7 @@ def create_reservation(
                 start_dt.strftime(TIME_FMT),
                 end_dt.strftime(TIME_FMT),
                 source,
+                customer_id,
                 now.strftime(TIME_FMT),
             ),
         )

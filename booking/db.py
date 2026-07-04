@@ -45,6 +45,14 @@ CREATE TABLE IF NOT EXISTS service (
     duration_min      INTEGER NOT NULL,
     active            INTEGER NOT NULL DEFAULT 1
 );
+CREATE TABLE IF NOT EXISTS customer (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider     TEXT NOT NULL,  -- kakao/naver
+    provider_uid TEXT NOT NULL,  -- 소셜 로그인 제공자의 고유 회원 ID
+    nickname     TEXT NOT NULL DEFAULT '',
+    created_at   TEXT NOT NULL,
+    UNIQUE (provider, provider_uid)
+);
 CREATE TABLE IF NOT EXISTS reservation (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     code          TEXT NOT NULL UNIQUE,  -- 고객에게 주는 예약번호
@@ -84,6 +92,13 @@ def init_db() -> None:
     conn = get_conn()
     try:
         conn.executescript(_SCHEMA)
+        # 기존 DB 마이그레이션: 소셜 로그인 고객과 예약 연결 컬럼
+        columns = [r["name"] for r in conn.execute("PRAGMA table_info(reservation)")]
+        if "customer_id" not in columns:
+            conn.execute(
+                "ALTER TABLE reservation ADD COLUMN customer_id INTEGER"
+                " REFERENCES customer(id)"
+            )
         for key, value in DEFAULT_CONFIG.items():
             conn.execute(
                 "INSERT OR IGNORE INTO shop_config (key, value) VALUES (?, ?)",

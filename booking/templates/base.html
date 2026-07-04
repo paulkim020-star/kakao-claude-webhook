@@ -53,6 +53,15 @@
   <header>
     <h1><a href="/booking">{{ shop_name }}</a></h1>
     <p>1인샵 · 100% 예약제</p>
+    <p style="margin-top:6px">
+      {% if customer %}
+        <b>{{ customer['nickname'] }}</b>님 ·
+        <a href="/booking/my" style="color:#555">내 예약</a> ·
+        <a href="/booking/logout" style="color:#999">로그아웃</a>
+      {% else %}
+        <a href="/booking/login" style="color:#555">간편 로그인</a>
+      {% endif %}
+    </p>
   </header>
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
   {% if message %}<div class="success">{{ message }}</div>{% endif %}

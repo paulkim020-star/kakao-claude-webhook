@@ -30,7 +30,9 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 Booking env vars: `BOOKING_DB` (SQLite path, default `booking.db`),
 `ADMIN_PASSWORD` (admin Basic auth), `BOOKING_BASE_URL` (챗봇이 안내하는
-예약 페이지 공개 URL).
+예약 페이지 공개 URL). 소셜 로그인(선택, `booking/auth.py`):
+`KAKAO_CLIENT_ID`/`KAKAO_CLIENT_SECRET`, `NAVER_CLIENT_ID`/`NAVER_CLIENT_SECRET`,
+`SESSION_SECRET` - 키가 없는 제공자는 로그인 버튼이 숨겨지고 비회원 예약만 동작.
 
 ### Key constraints to keep in mind
 

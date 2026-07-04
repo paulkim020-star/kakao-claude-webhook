@@ -30,6 +30,7 @@ from fastapi.responses import JSONResponse
 import anthropic
 
 from booking import admin as booking_admin
+from booking import auth as booking_auth
 from booking import web as booking_web
 from booking.db import init_db
 from booking.notify import notification_loop
@@ -49,6 +50,7 @@ async def _lifespan(app: FastAPI):
 
 app = FastAPI(title="Kakao <-> Claude Webhook", lifespan=_lifespan)
 app.include_router(booking_web.router)
+app.include_router(booking_auth.router)
 app.include_router(booking_admin.router)
 
 # 예약 웹앱의 공개 URL (배포 주소). 챗봇이 예약 링크를 안내할 때 사용.
