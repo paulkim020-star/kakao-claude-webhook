@@ -12,12 +12,14 @@ import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
-from fastapi.responses import RedirectResponse
+from fastapi import (
+    APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status,
+)
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 
-from booking import engine
+from booking import engine, photos
 from booking.db import get_conn, get_config, set_config
 from booking.engine import _cancel_pending_notifications
 
@@ -162,6 +164,67 @@ def manual_new(
                            service=service, date=date, slots=slots, error=str(exc))
         return RedirectResponse(f"/admin?date={reservation['start_at'][:10]}",
                                 status_code=303)
+    finally:
+        conn.close()
+
+
+@router.get("/photos/file/{photo_id}")
+def photo_file(photo_id: int):
+    """사진 원본 서빙 (관리자 인증 필수 - 공개 정적 경로로 노출 금지)."""
+    conn = get_conn()
+    try:
+        photo = photos.get_photo(conn, photo_id)
+    finally:
+        conn.close()
+    if photo is None or not photos.photo_file(photo["filename"]).exists():
+        raise HTTPException(status_code=404)
+    return FileResponse(photos.photo_file(photo["filename"]))
+
+
+@router.get("/photos/{reservation_id}")
+def photos_view(request: Request, reservation_id: int, error: str = ""):
+    conn = get_conn()
+    try:
+        reservation = conn.execute(
+            "SELECT r.*, s.name AS service_name FROM reservation r"
+            " JOIN service s ON s.id = r.service_id WHERE r.id = ?",
+            (reservation_id,),
+        ).fetchone()
+        if reservation is None:
+            raise HTTPException(status_code=404)
+        all_photos = photos.photos_for_reservation(conn, reservation_id)
+        return _render(
+            request, conn, "admin_photos.html",
+            r=reservation,
+            ref_photos=[p for p in all_photos if p["kind"] == "reference"],
+            result_photos={p["kind"]: p for p in all_photos
+                           if p["kind"] in photos.RESULT_KINDS},
+            angles=[("front", "정면"), ("side", "측면"), ("back", "뒷면")],
+            error=error,
+        )
+    finally:
+        conn.close()
+
+
+@router.post("/photos/{reservation_id}")
+def photos_upload(
+    reservation_id: int,
+    front: UploadFile = File(None),
+    side: UploadFile = File(None),
+    back: UploadFile = File(None),
+):
+    conn = get_conn()
+    try:
+        try:
+            for kind, upload in (("front", front), ("side", side), ("back", back)):
+                validated = photos.validate_upload(upload)
+                if validated is not None:
+                    photos.save_photo(conn, reservation_id, kind, *validated)
+        except photos.PhotoValidationError as exc:
+            return RedirectResponse(
+                f"/admin/photos/{reservation_id}?error={exc}", status_code=303
+            )
+        return RedirectResponse(f"/admin/photos/{reservation_id}", status_code=303)
     finally:
         conn.close()
 

@@ -14,6 +14,17 @@
       <span class="price">{{ "{:,}".format(r['base_price']) }}원{% if r['extra_charge_note'] %}~{% endif %}</span></div>
     {% if r['request_note'] %}<p class="muted" style="margin-top:6px">요청사항: {{ r['request_note'] }}</p>{% endif %}
   </div>
+  {% if ref_photos %}
+  <div class="card">
+    <h2>내가 올린 스타일 사진</h2>
+    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+      {% for p in ref_photos %}
+      <img src="/booking/photo/{{ p['id'] }}?code={{ r['code'] }}&phone={{ r['phone'] }}"
+           alt="스타일 사진" style="width:31%; border-radius:8px">
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
   {% if r['status'] == 'confirmed' %}
     <a class="btn" href="/booking/change?code={{ r['code'] }}&phone={{ r['phone'] }}">예약 시간 변경</a>
     <form method="post" action="/booking/cancel"

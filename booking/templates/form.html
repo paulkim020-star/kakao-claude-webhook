@@ -12,7 +12,7 @@
   </div>
   <div class="card">
     <h2>예약자 정보</h2>
-    <form method="post" action="/booking/reserve">
+    <form method="post" action="/booking/reserve" enctype="multipart/form-data">
       <input type="hidden" name="service_id" value="{{ service['id'] }}">
       <input type="hidden" name="start" value="{{ start }}">
       <label>이름</label>
@@ -21,6 +21,9 @@
       <input type="tel" name="phone" required placeholder="010-0000-0000" value="{{ phone or '' }}">
       <label>요청사항 (선택)</label>
       <textarea name="request_note" rows="3" maxlength="300" placeholder="예: 앞머리는 그대로 두고 싶어요">{{ request_note or '' }}</textarea>
+      <label>원하는 스타일 사진 (선택, 최대 3장)</label>
+      <input type="file" name="style_photos" accept="image/jpeg,image/png,image/webp" multiple>
+      <p class="muted" style="margin-top:4px">원하는 머리 사진을 캡처해서 올려주시면 상담이 훨씬 정확해져요.</p>
       <div class="notice">
         취소 정책: 예약 {{ config['cancel_deadline_hours'] }}시간 전까지 무료 변경·취소.
         이후 취소는 매장에 안내되며, 반복 시 예약이 제한될 수 있습니다.

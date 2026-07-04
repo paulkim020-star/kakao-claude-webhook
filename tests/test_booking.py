@@ -299,3 +299,105 @@ def test_social_login_flow_links_reservations(client, monkeypatch):
     client.get("/booking/logout")
     res = client.get("/booking/my", follow_redirects=False)
     assert res.status_code == 303 and res.headers["location"] == "/booking/login"
+
+
+# ---------- 사진 (희망 스타일 / 시술 결과) ----------
+
+# 1x1 투명 PNG
+PNG = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+    "0000000a49444154789c6360000002000148afa4710000000049454e44ae426082"
+)
+
+
+@pytest.fixture
+def photo_dir(tmp_path, monkeypatch):
+    from booking import photos
+
+    monkeypatch.setattr(photos, "PHOTO_DIR", str(tmp_path / "photos"))
+    return tmp_path / "photos"
+
+
+def test_reserve_with_style_photos(client, photo_dir):
+    date = _future_open_date()
+    res = client.post(
+        "/booking/reserve",
+        data={"service_id": 1, "start": f"{date}T13:00",
+              "customer_name": "사진손님", "phone": "010-8888-7777", "request_note": ""},
+        files=[("style_photos", ("want1.png", PNG, "image/png")),
+               ("style_photos", ("want2.png", PNG, "image/png"))],
+    )
+    assert "예약이 확정되었습니다" in res.text
+
+    conn = db.get_conn()
+    r = conn.execute("SELECT * FROM reservation WHERE phone = '01088887777'").fetchone()
+    rows = conn.execute(
+        "SELECT * FROM photo WHERE reservation_id = ? AND kind = 'reference'", (r["id"],)
+    ).fetchall()
+    conn.close()
+    assert len(rows) == 2
+    assert all((photo_dir / p["filename"]).exists() for p in rows)
+
+    # 본인(예약번호+전화번호)은 열람 가능, 남의 번호로는 불가
+    ok = client.get(f"/booking/photo/{rows[0]['id']}?code={r['code']}&phone=01088887777")
+    assert ok.status_code == 200 and ok.content == PNG
+    denied = client.get(
+        f"/booking/photo/{rows[0]['id']}?code={r['code']}&phone=01000000000",
+        follow_redirects=False,
+    )
+    assert denied.status_code == 303
+
+
+def test_reserve_rejects_bad_photo_type(client, photo_dir):
+    date = _future_open_date()
+    res = client.post(
+        "/booking/reserve",
+        data={"service_id": 1, "start": f"{date}T10:00",
+              "customer_name": "거절손님", "phone": "010-1212-3434", "request_note": ""},
+        files=[("style_photos", ("virus.gif", b"GIF89a", "image/gif"))],
+    )
+    assert "jpg/png/webp" in res.text
+    conn = db.get_conn()
+    count = conn.execute(
+        "SELECT COUNT(*) FROM reservation WHERE phone = '01012123434'"
+    ).fetchone()[0]
+    conn.close()
+    assert count == 0  # 사진이 거절되면 예약도 생성되지 않음
+
+
+def test_admin_result_photos_replace_per_angle(client, photo_dir):
+    date = _future_open_date()
+    client.post("/booking/reserve", data={
+        "service_id": 1, "start": f"{date}T17:00",
+        "customer_name": "결과손님", "phone": "010-4646-5757", "request_note": "",
+    })
+    conn = db.get_conn()
+    rid = conn.execute(
+        "SELECT id FROM reservation WHERE phone = '01046465757'"
+    ).fetchone()["id"]
+    conn.close()
+
+    auth = ("admin", "changeme")
+    # 인증 없이 접근 불가
+    assert client.get(f"/admin/photos/{rid}").status_code == 401
+
+    res = client.post(f"/admin/photos/{rid}", auth=auth,
+                      files={"front": ("f1.png", PNG, "image/png")},
+                      follow_redirects=False)
+    assert res.status_code == 303
+    res = client.post(f"/admin/photos/{rid}", auth=auth,
+                      files={"front": ("f2.png", PNG, "image/png")},
+                      follow_redirects=False)
+    assert res.status_code == 303
+
+    conn = db.get_conn()
+    rows = conn.execute(
+        "SELECT * FROM photo WHERE reservation_id = ? AND kind = 'front'", (rid,)
+    ).fetchall()
+    conn.close()
+    assert len(rows) == 1  # 같은 각도는 교체(1장 유지)
+    assert (photo_dir / rows[0]["filename"]).exists()
+
+    # 사진 파일 서빙도 관리자 인증 필수
+    assert client.get(f"/admin/photos/file/{rows[0]['id']}").status_code == 401
+    assert client.get(f"/admin/photos/file/{rows[0]['id']}", auth=auth).status_code == 200

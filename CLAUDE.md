@@ -33,6 +33,9 @@ Booking env vars: `BOOKING_DB` (SQLite path, default `booking.db`),
 예약 페이지 공개 URL). 소셜 로그인(선택, `booking/auth.py`):
 `KAKAO_CLIENT_ID`/`KAKAO_CLIENT_SECRET`, `NAVER_CLIENT_ID`/`NAVER_CLIENT_SECRET`,
 `SESSION_SECRET` - 키가 없는 제공자는 로그인 버튼이 숨겨지고 비회원 예약만 동작.
+사진(`booking/photos.py`): `PHOTO_DIR` (기본 `photos/`) - 고객 희망 스타일 사진과
+시술 결과 사진(정면/측면/뒷면) 저장 폴더. 사진은 반드시 인증 라우트로만 서빙
+(고객: 본인 예약 확인, 관리자: Basic 인증). 정적 경로로 공개 금지.
 
 ### Key constraints to keep in mind
 

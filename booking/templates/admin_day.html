@@ -23,7 +23,8 @@
     </div>
     <div class="row">
       <span>{{ r['customer_name'] }} ({{ r['phone'] }})</span>
-      <span class="muted">{{ r['source'] }} · {{ r['code'] }}</span>
+      <span class="muted">{{ r['source'] }} · {{ r['code'] }} ·
+        <a href="/admin/photos/{{ r['id'] }}">📷 사진</a></span>
     </div>
     {% if r['request_note'] %}<p class="muted">요청: {{ r['request_note'] }}</p>{% endif %}
     {% if r['status'] == 'confirmed' %}

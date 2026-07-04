@@ -68,6 +68,13 @@ CREATE TABLE IF NOT EXISTS reservation (
     created_at    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_reservation_start ON reservation(start_at);
+CREATE TABLE IF NOT EXISTS photo (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    reservation_id INTEGER NOT NULL REFERENCES reservation(id),
+    kind           TEXT NOT NULL,  -- reference(고객 희망 스타일) / front/side/back(시술 결과)
+    filename       TEXT NOT NULL,  -- PHOTO_DIR 안의 파일명 (booking/photos.py)
+    created_at     TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS notification (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     reservation_id INTEGER NOT NULL REFERENCES reservation(id),
