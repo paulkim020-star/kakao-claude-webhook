@@ -4,6 +4,7 @@
     <h2>시술을 선택해 주세요</h2>
     <p class="muted">가격과 소요시간, 추가금 조건을 미리 확인하실 수 있어요.</p>
   </div>
+  <div class="cards-grid">
   {% for s in services %}
   <div class="card">
     <div class="row"><span><b>{{ s['name'] }}</b> <span class="muted">{{ s['duration_min'] }}분</span></span>
@@ -14,5 +15,6 @@
     </div>
   </div>
   {% endfor %}
+  </div>
   <div class="notice">예약 시간 {{ config['cancel_deadline_hours'] }}시간 전까지는 무료로 변경·취소하실 수 있어요.</div>
 {% endblock %}

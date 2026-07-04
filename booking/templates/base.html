@@ -35,6 +35,10 @@
 
   .card { background: #fffdf8; border-radius: 12px; padding: 20px; margin-top: 14px;
           border: 1px solid #e8ddc9; box-shadow: 0 2px 8px rgba(120, 100, 70, .08); }
+  /* PC에서 다단 배치를 위한 컨테이너 (모바일에서는 세로 그대로) */
+  .cards-grid, .duo { display: grid; grid-template-columns: 1fr; gap: 14px;
+                      margin-top: 14px; }
+  .cards-grid .card, .duo .card { margin-top: 0; }
   .card h2 { font-family: Georgia, "Noto Serif KR", serif; font-size: 17px;
              margin-bottom: 7px; color: #3f3428; }
   .card h2 .hl { background: linear-gradient(transparent 62%, #f6dcc4 62%); }
@@ -93,13 +97,22 @@
   footer a { color: #97897a; font-size: 13px; font-weight: 600; text-decoration: none;
              border-bottom: 1px dashed #c9b895; padding-bottom: 2px; }
 
-  /* PC(웹) 화면 */
+  /* PC(웹) 화면: 2단 레이아웃 */
   @media (min-width: 768px) {
-    .wrap { max-width: 720px; padding: 30px 24px; }
-    header { padding: 34px 30px 24px; }
-    header h1 { font-size: 31px; }
-    .slots { grid-template-columns: repeat(6, 1fr); }
-    .btn { max-width: 400px; margin-left: auto; margin-right: auto; }
+    .wrap { max-width: 980px; padding: 30px 24px; }
+    header { padding: 36px 30px 26px; }
+    header h1 { font-size: 32px; }
+    header .tagline { font-size: 12.5px; }
+    /* 단독 카드(예약 완료/내 예약 등)는 가운데 좁게 */
+    .wrap > .card, .wrap > .error, .wrap > .success, .wrap > .notice {
+      max-width: 620px; margin-left: auto; margin-right: auto; width: 100%; }
+    .wrap > .btn, .wrap > form { max-width: 620px; margin-left: auto;
+      margin-right: auto; width: 100%; }
+    /* 시술 메뉴: 2열 그리드 */
+    .cards-grid { grid-template-columns: repeat(2, 1fr); }
+    /* 시간 선택/정보 입력: 좌측 요약 + 우측 본문 */
+    .duo { grid-template-columns: 340px 1fr; align-items: start; }
+    .slots { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); }
   }
 </style>
 </head>

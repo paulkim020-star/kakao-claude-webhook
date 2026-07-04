@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+  <div class="duo">
   <div class="card">
     {% if change_mode %}
       <h2>새 시간을 선택해 주세요</h2>
@@ -41,5 +42,6 @@
       <h2>예약 가능한 시간이 없어요</h2>
       <p class="muted">휴무일이거나 예약이 모두 찼습니다. 다른 날짜를 선택해 주세요.</p>
     {% endif %}
+  </div>
   </div>
 {% endblock %}
