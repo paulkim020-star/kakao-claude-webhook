@@ -22,7 +22,7 @@
   </div>
   <div class="card">
     {% if slots %}
-      <h2>예약 가능 시간</h2>
+      <h2><span class="hl">{{ date_label }}</span> 예약 가능 시간</h2>
       <div class="slots" style="margin-top:10px">
         {% for t in slots %}
           {% if change_mode %}

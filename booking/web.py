@@ -1,5 +1,6 @@
 """고객용 예약 웹 (/booking). 모바일 웹 기준의 서버 렌더링 페이지."""
 
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
@@ -26,6 +27,12 @@ def _get_service(conn, service_id: int):
     return conn.execute(
         "SELECT * FROM service WHERE id = ? AND active = 1", (service_id,)
     ).fetchone()
+
+
+def _date_label(date_str: str) -> str:
+    """다이어리 느낌의 날짜 표기: '7월 8일 (화)'."""
+    d = datetime.strptime(date_str, "%Y-%m-%d")
+    return f"{d.month}월 {d.day}일 ({'월화수목금토일'[d.weekday()]})"
 
 
 def _my_context(conn, reservation) -> dict:
@@ -61,7 +68,8 @@ def choose_time(request: Request, service_id: int, date: str = ""):
         date = date or today
         slots = engine.available_slots(conn, service["duration_min"], date)
         return _render(request, conn, "time.html", service=service,
-                       date=date, today=today, slots=slots, change_mode=False)
+                       date=date, today=today, slots=slots, change_mode=False,
+                       date_label=_date_label(date))
     finally:
         conn.close()
 
@@ -254,7 +262,7 @@ def change_form(request: Request, code: str, phone: str, date: str = ""):
         return _render(request, conn, "time.html", service=service,
                        date=date, today=today, slots=slots,
                        change_mode=True, code=reservation["code"],
-                       phone=reservation["phone"])
+                       phone=reservation["phone"], date_label=_date_label(date))
     finally:
         conn.close()
 

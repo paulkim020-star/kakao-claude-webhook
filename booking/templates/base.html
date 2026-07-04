@@ -5,81 +5,100 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ shop_name }} 예약</title>
 <style>
-  /* 팔레트: 딥 네이비(#122a44) + 골드(#c9a227) 포인트 + 밝은 뉴트럴 배경 */
+  /* 다이어리 감성: 크림 종이 배경 + 잉크 브라운 + 테라코타 포인트 */
   * { box-sizing: border-box; margin: 0; }
   body { font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-         background: #f6f7f9; color: #24303e; -webkit-font-smoothing: antialiased; }
-  .wrap { max-width: 480px; margin: 0 auto; padding: 14px 16px 8px; }
+         color: #4d4437; -webkit-font-smoothing: antialiased;
+         background-color: #f7f2e9;
+         background-image: radial-gradient(#e8dfd0 1px, transparent 1px);
+         background-size: 22px 22px; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
 
-  /* 네이비 헤더 배너 */
-  header { background: linear-gradient(135deg, #0e2238 0%, #16334f 100%);
-           border-radius: 18px; padding: 26px 22px 22px; color: #fff;
-           box-shadow: 0 8px 24px rgba(14, 34, 56, .25); }
-  header h1 { font-family: Georgia, "Noto Serif KR", serif; font-size: 26px;
-              font-weight: 700; letter-spacing: .5px; }
-  header h1 a { color: #fff; text-decoration: none; }
-  header .tagline { color: #d9bd6a; font-size: 12px; margin-top: 7px;
-                    letter-spacing: 2.5px; font-weight: 600; }
-  header .account { margin-top: 12px; font-size: 13px; color: #93a5b8;
-                    padding-top: 12px; border-top: 1px solid rgba(255,255,255,.12); }
-  header .account a { color: #e8d9a0; font-weight: 600; text-decoration: none; }
-  header .account b { color: #fff; }
+  /* 다이어리 표지 느낌의 헤더 */
+  header { background: #fffdf8; border: 1.5px solid #d8c9ae;
+           outline: 4px solid #fffdf8; outline-offset: -8px;
+           border-radius: 14px; padding: 26px 22px 20px; text-align: center;
+           box-shadow: 0 3px 12px rgba(120, 100, 70, .12); position: relative; }
+  header::before { /* 마스킹테이프 */
+           content: ""; position: absolute; top: -9px; left: 50%;
+           width: 92px; height: 20px; transform: translateX(-50%) rotate(-2deg);
+           background: rgba(209, 123, 100, .35); border-radius: 2px; }
+  header h1 { font-family: Georgia, "Noto Serif KR", serif; font-size: 25px;
+              color: #3f3428; letter-spacing: .5px; }
+  header h1 a { color: inherit; text-decoration: none; }
+  header .tagline { color: #b08d57; font-size: 11.5px; margin-top: 7px;
+                    letter-spacing: 3px; font-weight: 600; }
+  header .account { margin-top: 12px; font-size: 13px; color: #97897a;
+                    padding-top: 10px; border-top: 1px dashed #ddd0bb; }
+  header .account a { color: #c26a52; font-weight: 700; text-decoration: none; }
+  header .account b { color: #3f3428; }
 
-  .card { background: #fff; border-radius: 16px; padding: 20px; margin-top: 12px;
-          box-shadow: 0 1px 3px rgba(15, 23, 42, .06); border: 1px solid #edf0f4; }
-  .card h2 { font-size: 16px; margin-bottom: 6px; color: #122a44; letter-spacing: -.2px; }
-  .muted { color: #8b95a1; font-size: 13px; line-height: 1.55; }
-  .price { font-weight: 800; color: #a1791a; }
-  .notice { background: #faf6ea; border-radius: 12px; padding: 12px 14px;
-            font-size: 13px; color: #77621f; margin-top: 14px; line-height: 1.55;
-            border: 1px solid #eee3c3; }
-  .btn { display: block; width: 100%; text-align: center; padding: 15px;
+  .card { background: #fffdf8; border-radius: 12px; padding: 20px; margin-top: 14px;
+          border: 1px solid #e8ddc9; box-shadow: 0 2px 8px rgba(120, 100, 70, .08); }
+  .card h2 { font-family: Georgia, "Noto Serif KR", serif; font-size: 17px;
+             margin-bottom: 7px; color: #3f3428; }
+  .card h2 .hl { background: linear-gradient(transparent 62%, #f6dcc4 62%); }
+  .muted { color: #a1937f; font-size: 13px; line-height: 1.6; }
+  .price { font-weight: 800; color: #c26a52; }
+  .notice { /* 포스트잇 */
+            background: #fdf6d8; border-radius: 4px 14px 4px 14px;
+            padding: 13px 15px; font-size: 13px; color: #7d6a2a; margin-top: 14px;
+            line-height: 1.6; border: 1px solid #efe2ae;
+            box-shadow: 0 2px 5px rgba(120, 100, 70, .08);
+            transform: rotate(-.4deg); }
+  .btn { display: block; width: 100%; text-align: center; padding: 14px;
          border-radius: 12px; border: 0; font-size: 15px; font-weight: 700;
-         background: #122a44; color: #fff; text-decoration: none; cursor: pointer;
-         letter-spacing: .3px; }
-  .btn:hover { background: #1b3b5e; }
-  .btn.secondary { background: #fff; color: #122a44; border: 1.5px solid #cbd5e0; }
-  .btn.secondary:hover { border-color: #122a44; background: #fff; }
+         background: #c26a52; color: #fff; text-decoration: none; cursor: pointer;
+         box-shadow: 0 3px 10px rgba(194, 106, 82, .3); }
+  .btn:hover { background: #ad5843; }
+  .btn.secondary { background: #fffdf8; color: #8a5b48; border: 1.5px solid #d8b9a6;
+         box-shadow: none; }
+  .btn.secondary:hover { border-color: #c26a52; color: #c26a52; }
   .btn + .btn, form + .btn, .btn + form { margin-top: 10px; }
-  .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+  /* 시간 슬롯: 다이어리 날짜 스티커 */
+  .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
   .slots a, .slots button { display: block; width: 100%; text-align: center;
-         padding: 12px 0; border-radius: 10px; border: 1px solid #dbe2ea;
-         background: #fff; color: #24303e; font-size: 14px; font-weight: 600;
+         padding: 11px 0; border-radius: 999px; border: 1.5px solid #ddc9ac;
+         background: #fffdf8; color: #6b5b45; font-size: 13.5px; font-weight: 700;
          text-decoration: none; cursor: pointer; transition: all .12s; }
-  .slots a:hover, .slots button:hover { background: #122a44; color: #fff;
-         border-color: #122a44; }
-  label { display: block; font-size: 12px; color: #6c7683; font-weight: 700;
-          margin: 15px 0 6px; letter-spacing: .5px; }
+  .slots a:hover, .slots button:hover { background: #c26a52; color: #fff;
+         border-color: #c26a52; transform: translateY(-1px); }
+
+  label { display: block; font-size: 12.5px; color: #8a795f; font-weight: 700;
+          margin: 15px 0 6px; }
+  label::before { content: "✎ "; color: #c9a87c; }
   input[type=text], input[type=tel], input[type=date], input[type=file],
   textarea, select {
-         width: 100%; padding: 13px; border: 1px solid #d7dde5; border-radius: 10px;
-         font-size: 15px; background: #fff; color: #24303e; }
-  input:focus, textarea:focus, select:focus { outline: none; border-color: #122a44;
-         box-shadow: 0 0 0 3px rgba(18, 42, 68, .08); }
-  .error { background: #fdf1f0; color: #a63a32; border-radius: 12px;
+         width: 100%; padding: 12px; border: 1.5px solid #e2d6bf; border-radius: 10px;
+         font-size: 15px; background: #fffdf8; color: #4d4437; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: #c26a52; }
+  .error { background: #fbeeea; color: #a3462f; border-radius: 10px;
            padding: 12px 14px; font-size: 13px; margin-top: 12px;
-           border: 1px solid #f3d3d0; }
-  .success { background: #eef7f0; color: #2b6a3f; border-radius: 12px;
+           border: 1px dashed #e0b3a3; }
+  .success { background: #eef3e4; color: #5a6e35; border-radius: 10px;
              padding: 12px 14px; font-size: 13px; margin-top: 12px;
-             border: 1px solid #cfe8d6; }
+             border: 1px dashed #c3cfa2; }
   .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0;
-         font-size: 14px; border-bottom: 1px solid #f1f3f6; }
+         font-size: 14px; border-bottom: 1px dashed #e8ddc9; }
   .row:last-child { border-bottom: 0; }
-  .row .k { color: #8b95a1; flex-shrink: 0; }
-  .code { font-family: Georgia, serif; font-size: 32px; font-weight: 700;
-          letter-spacing: 6px; text-align: center; padding: 16px 0; color: #122a44;
-          background: #faf6ea; border: 1px dashed #d9bd6a; border-radius: 12px;
-          margin-top: 10px; }
-  footer { padding: 22px 0 26px; text-align: center; }
-  footer a { color: #6c7683; font-size: 13px; font-weight: 600; text-decoration: none;
-             border-bottom: 1px solid #d0d6dd; padding-bottom: 2px; }
+  .row .k { color: #a1937f; flex-shrink: 0; }
+
+  /* 예약번호: 다이어리 도장 느낌 */
+  .code { font-family: Georgia, serif; font-size: 30px; font-weight: 700;
+          letter-spacing: 6px; text-align: center; padding: 16px 0; color: #c26a52;
+          border: 2.5px dashed #d9a08c; border-radius: 12px; margin-top: 10px;
+          background: #fdf8f2; transform: rotate(-.6deg); }
+  footer { padding: 24px 0; text-align: center; }
+  footer a { color: #97897a; font-size: 13px; font-weight: 600; text-decoration: none;
+             border-bottom: 1px dashed #c9b895; padding-bottom: 2px; }
 
   /* PC(웹) 화면 */
   @media (min-width: 768px) {
-    .wrap { max-width: 720px; padding: 28px 24px; }
-    header { padding: 34px 30px 26px; }
-    header h1 { font-size: 32px; }
-    .slots { grid-template-columns: repeat(7, 1fr); }
+    .wrap { max-width: 720px; padding: 30px 24px; }
+    header { padding: 34px 30px 24px; }
+    header h1 { font-size: 31px; }
+    .slots { grid-template-columns: repeat(6, 1fr); }
     .btn { max-width: 400px; margin-left: auto; margin-right: auto; }
   }
 </style>
@@ -88,12 +107,12 @@
 <div class="wrap">
   <header>
     <h1><a href="/booking">{{ shop_name }}</a></h1>
-    <p class="tagline">PRIVATE HAIR SALON · 100% 예약제</p>
+    <p class="tagline">RESERVATION DIARY ✿ 1인샵 · 100% 예약제</p>
     <p class="account">
       {% if customer %}
         <b>{{ customer['nickname'] }}</b>님 ·
         <a href="/booking/my">내 예약</a> ·
-        <a href="/booking/logout" style="color:#93a5b8">로그아웃</a>
+        <a href="/booking/logout" style="color:#97897a">로그아웃</a>
       {% else %}
         <a href="/booking/login">간편 로그인</a>
       {% endif %}
