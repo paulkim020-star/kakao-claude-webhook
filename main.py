@@ -19,18 +19,42 @@
    웹훅 URL로 등록 (가이드 문서 참고)
 """
 
+import asyncio
 import os
 import logging
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import anthropic
 
+from booking import admin as booking_admin
+from booking import auth as booking_auth
+from booking import web as booking_web
+from booking.db import init_db
+from booking.notify import notification_loop
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("kakao-claude-webhook")
 
-app = FastAPI(title="Kakao <-> Claude Webhook")
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    # 예약 DB 초기화 + 리마인드 알림 스케줄러 시작
+    init_db()
+    reminder_task = asyncio.create_task(notification_loop())
+    yield
+    reminder_task.cancel()
+
+
+app = FastAPI(title="Kakao <-> Claude Webhook", lifespan=_lifespan)
+app.include_router(booking_web.router)
+app.include_router(booking_auth.router)
+app.include_router(booking_admin.router)
+
+# 예약 웹앱의 공개 URL (배포 주소). 챗봇이 예약 링크를 안내할 때 사용.
+BOOKING_BASE_URL = os.environ.get("BOOKING_BASE_URL", "http://localhost:8000")
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
@@ -87,6 +111,18 @@ async def kakao_webhook(request: Request):
     if not utterance:
         return JSONResponse(
             _kakao_simple_text_response("메시지를 인식하지 못했어요. 다시 말씀해 주세요.")
+        )
+
+    # "예약" 관련 발화는 Claude를 거치지 않고 예약 웹앱으로 바로 안내
+    # (웹훅 5초 제한 안에서 확실하게 응답 + 예약은 웹에서 처리하는 것이 정확함)
+    if "예약" in utterance:
+        return JSONResponse(
+            _kakao_simple_text_response(
+                "예약은 아래 링크에서 바로 하실 수 있어요 💇\n\n"
+                f"▶ 예약하기: {BOOKING_BASE_URL}/booking\n"
+                f"▶ 예약 조회/변경/취소: {BOOKING_BASE_URL}/booking/lookup\n\n"
+                "예약번호와 휴대폰 번호만 있으면 언제든 변경·취소하실 수 있습니다."
+            )
         )
 
     if client is None:

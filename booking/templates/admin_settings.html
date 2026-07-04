@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>영업시간 · 정책 설정</h2>
+    <p class="muted"><a href="/admin">← 예약 현황으로</a></p>
+    <form method="post" action="/admin/settings">
+      <label>매장 이름</label>
+      <input type="text" name="shop_name" value="{{ config['shop_name'] }}" required>
+      <label>오픈 시간</label>
+      <input type="text" name="open_time" value="{{ config['open_time'] }}" required placeholder="10:00">
+      <label>마감 시간</label>
+      <input type="text" name="close_time" value="{{ config['close_time'] }}" required placeholder="20:00">
+      <label>예약 간격(분)</label>
+      <input type="text" name="slot_minutes" value="{{ config['slot_minutes'] }}" required inputmode="numeric">
+      <label>무료 취소 마감(예약 몇 시간 전)</label>
+      <input type="text" name="cancel_deadline_hours" value="{{ config['cancel_deadline_hours'] }}" required inputmode="numeric">
+      <label>정기 휴무 요일</label>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; font-size:14px">
+        {% for i, name in weekdays %}
+        <label style="margin:0"><input type="checkbox" name="weekly_closed" value="{{ i }}"
+          {% if i|string in config['weekly_closed'].split(',') %}checked{% endif %}> {{ name }}</label>
+        {% endfor %}
+      </div>
+      <div style="margin-top:14px"><button class="btn" type="submit">저장</button></div>
+    </form>
+  </div>
+  <div class="card">
+    <h2>지정 휴무일</h2>
+    {% for d in closed_dates %}
+    <form method="post" action="/admin/closed-dates/delete" class="row">
+      <span>{{ d['date'] }}</span>
+      <input type="hidden" name="date" value="{{ d['date'] }}">
+      <button type="submit" style="border:0;background:none;color:#b3261e;cursor:pointer">삭제</button>
+    </form>
+    {% endfor %}
+    <form method="post" action="/admin/closed-dates/add" style="margin-top:10px">
+      <input type="date" name="date" required>
+      <div style="margin-top:8px"><button class="btn secondary" type="submit">휴무일 추가</button></div>
+    </form>
+  </div>
+{% endblock %}

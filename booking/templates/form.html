@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>예약 내용 확인</h2>
+    <div class="row"><span class="k">시술</span><span>{{ service['name'] }} ({{ service['duration_min'] }}분)</span></div>
+    <div class="row"><span class="k">일시</span><span>{{ start.replace('T', ' ') }}</span></div>
+    <div class="row"><span class="k">가격</span>
+      <span class="price">{{ "{:,}".format(service['base_price']) }}원{% if service['extra_charge_note'] %}~{% endif %}</span></div>
+    {% if service['extra_charge_note'] %}
+      <p class="muted" style="margin-top:6px">추가금 조건: {{ service['extra_charge_note'] }} — 방문 시 상태 확인 후 확정되며, 이 외 추가 비용은 없습니다.</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h2>예약자 정보</h2>
+    <form method="post" action="/booking/reserve" enctype="multipart/form-data">
+      <input type="hidden" name="service_id" value="{{ service['id'] }}">
+      <input type="hidden" name="start" value="{{ start }}">
+      <label>이름</label>
+      <input type="text" name="customer_name" required maxlength="30" value="{{ customer_name or '' }}">
+      <label>휴대폰 번호</label>
+      <input type="tel" name="phone" required placeholder="010-0000-0000" value="{{ phone or '' }}">
+      <label>요청사항 (선택)</label>
+      <textarea name="request_note" rows="3" maxlength="300" placeholder="예: 앞머리는 그대로 두고 싶어요">{{ request_note or '' }}</textarea>
+      <label>원하는 스타일 사진 (선택, 최대 3장)</label>
+      <input type="file" name="style_photos" accept="image/jpeg,image/png,image/webp" multiple>
+      <p class="muted" style="margin-top:4px">원하는 머리 사진을 캡처해서 올려주시면 상담이 훨씬 정확해져요.</p>
+      <div class="notice">
+        취소 정책: 예약 {{ config['cancel_deadline_hours'] }}시간 전까지 무료 변경·취소.
+        이후 취소는 매장에 안내되며, 반복 시 예약이 제한될 수 있습니다.
+      </div>
+      <label style="font-size:14px;color:#222;margin-top:12px">
+        <input type="checkbox" required> 취소 정책을 확인했습니다
+      </label>
+      <div style="margin-top:14px">
+        <button class="btn" type="submit">예약 확정하기</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

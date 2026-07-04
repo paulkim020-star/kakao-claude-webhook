@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>예약 정보 <span class="muted">({{ r['code'] }})</span></h2>
+    <div class="row"><span class="k">상태</span><span>
+      {% if r['status'] == 'confirmed' %}확정
+      {% elif r['status'] == 'canceled' %}취소됨
+      {% elif r['status'] == 'done' %}방문 완료
+      {% else %}{{ r['status'] }}{% endif %}</span></div>
+    <div class="row"><span class="k">시술</span><span>{{ r['service_name'] }} ({{ r['duration_min'] }}분)</span></div>
+    <div class="row"><span class="k">일시</span><span>{{ r['start_at'].replace('T', ' ') }}</span></div>
+    <div class="row"><span class="k">예약자</span><span>{{ r['customer_name'] }}</span></div>
+    <div class="row"><span class="k">가격</span>
+      <span class="price">{{ "{:,}".format(r['base_price']) }}원{% if r['extra_charge_note'] %}~{% endif %}</span></div>
+    {% if r['request_note'] %}<p class="muted" style="margin-top:6px">요청사항: {{ r['request_note'] }}</p>{% endif %}
+  </div>
+  {% if ref_photos %}
+  <div class="card">
+    <h2>내가 올린 스타일 사진</h2>
+    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+      {% for p in ref_photos %}
+      <img src="/booking/photo/{{ p['id'] }}?code={{ r['code'] }}&phone={{ r['phone'] }}"
+           alt="스타일 사진" style="width:31%; border-radius:8px">
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% if r['status'] == 'confirmed' %}
+    <a class="btn" href="/booking/change?code={{ r['code'] }}&phone={{ r['phone'] }}">예약 시간 변경</a>
+    <form method="post" action="/booking/cancel"
+          onsubmit="return confirm('정말 예약을 취소하시겠어요?')">
+      <input type="hidden" name="code" value="{{ r['code'] }}">
+      <input type="hidden" name="phone" value="{{ r['phone'] }}">
+      <button class="btn secondary" type="submit" style="margin-top:8px">예약 취소</button>
+    </form>
+    <div class="notice">예약 {{ config['cancel_deadline_hours'] }}시간 전까지는 무료로 변경·취소하실 수 있어요.</div>
+  {% else %}
+    <a class="btn" href="/booking">새로 예약하기</a>
+  {% endif %}
+{% endblock %}

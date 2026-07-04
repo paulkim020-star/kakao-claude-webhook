@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2 style="text-align:center">예약이 확정되었습니다 🎉</h2>
+    <div class="code">{{ r['code'] }}</div>
+    <p class="muted" style="text-align:center">예약번호를 꼭 기억해 주세요.<br>조회·변경·취소에 사용됩니다.</p>
+  </div>
+  <div class="card">
+    <div class="row"><span class="k">시술</span><span>{{ r['service_name'] }}</span></div>
+    <div class="row"><span class="k">일시</span><span>{{ r['start_at'].replace('T', ' ') }}</span></div>
+    <div class="row"><span class="k">예약자</span><span>{{ r['customer_name'] }}</span></div>
+    <div class="row"><span class="k">가격</span>
+      <span class="price">{{ "{:,}".format(r['base_price']) }}원{% if r['extra_charge_note'] %}~{% endif %}</span></div>
+  </div>
+  <a class="btn secondary" href="/booking/lookup">내 예약 관리</a>
+{% endblock %}

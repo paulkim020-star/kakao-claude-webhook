@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>메뉴 관리</h2>
+    <p class="muted"><a href="/admin">← 예약 현황으로</a></p>
+  </div>
+  {% for s in services %}
+  <div class="card" {% if not s['active'] %}style="opacity:.55"{% endif %}>
+    <form method="post" action="/admin/services/{{ s['id'] }}/update">
+      <label>이름</label>
+      <input type="text" name="name" value="{{ s['name'] }}" required>
+      <label>기본가(원)</label>
+      <input type="text" name="base_price" value="{{ s['base_price'] }}" required inputmode="numeric">
+      <label>추가금 조건 (비우면 추가금 없음)</label>
+      <input type="text" name="extra_charge_note" value="{{ s['extra_charge_note'] }}">
+      <label>소요시간(분)</label>
+      <input type="text" name="duration_min" value="{{ s['duration_min'] }}" required inputmode="numeric">
+      <label>상태</label>
+      <select name="active">
+        <option value="1" {% if s['active'] %}selected{% endif %}>판매 중</option>
+        <option value="0" {% if not s['active'] %}selected{% endif %}>숨김</option>
+      </select>
+      <div style="margin-top:12px"><button class="btn secondary" type="submit">저장</button></div>
+    </form>
+  </div>
+  {% endfor %}
+  <div class="card">
+    <h2>새 메뉴 추가</h2>
+    <form method="post" action="/admin/services/add">
+      <label>이름</label><input type="text" name="name" required>
+      <label>카테고리</label><input type="text" name="category" required placeholder="컷/펌/염색/클리닉">
+      <label>기본가(원)</label><input type="text" name="base_price" required inputmode="numeric">
+      <label>추가금 조건 (선택)</label><input type="text" name="extra_charge_note">
+      <label>소요시간(분)</label><input type="text" name="duration_min" required inputmode="numeric">
+      <div style="margin-top:12px"><button class="btn" type="submit">추가</button></div>
+    </form>
+  </div>
+{% endblock %}

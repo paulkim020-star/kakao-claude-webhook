@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>시술 사진 기록</h2>
+    <p class="muted">{{ r['start_at'].replace('T', ' ') }} · {{ r['service_name'] }} ·
+      {{ r['customer_name'] }} ({{ r['phone'] }})</p>
+    <p class="muted" style="margin-top:4px">
+      <a href="/admin?date={{ r['start_at'][:10] }}">← 예약 현황으로</a></p>
+  </div>
+  {% if ref_photos %}
+  <div class="card">
+    <h2>고객이 올린 희망 스타일</h2>
+    <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+      {% for p in ref_photos %}
+      <img src="/admin/photos/file/{{ p['id'] }}" alt="희망 스타일" style="width:31%; border-radius:8px">
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  <div class="card">
+    <h2>시술 결과 (정면 · 측면 · 뒷면)</h2>
+    <p class="muted">각도별 1장씩, 다시 올리면 교체됩니다. 촬영 전 고객 동의를 받아주세요.</p>
+    <form method="post" action="/admin/photos/{{ r['id'] }}" enctype="multipart/form-data">
+      {% for kind, label in angles %}
+        <label>{{ label }}</label>
+        {% if result_photos.get(kind) %}
+          <img src="/admin/photos/file/{{ result_photos[kind]['id'] }}" alt="{{ label }}"
+               style="width:60%; border-radius:8px; display:block; margin-bottom:6px">
+        {% endif %}
+        <input type="file" name="{{ kind }}" accept="image/jpeg,image/png,image/webp" capture="environment">
+      {% endfor %}
+      <div style="margin-top:14px"><button class="btn" type="submit">저장</button></div>
+    </form>
+  </div>
+{% endblock %}

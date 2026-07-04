@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>관리자 · 예약 현황</h2>
+    <p class="muted"><a href="/admin/new?date={{ date }}">+ 수기 예약</a> ·
+       <a href="/admin/services">메뉴 관리</a> ·
+       <a href="/admin/settings">영업시간/휴무</a></p>
+    <form method="get" action="/admin" style="margin-top:8px; display:flex; gap:8px; align-items:center">
+      <a class="btn secondary" style="width:44px;padding:9px 0" href="/admin?date={{ prev_date }}">◀</a>
+      <input type="date" name="date" value="{{ date }}" onchange="this.form.submit()">
+      <a class="btn secondary" style="width:44px;padding:9px 0" href="/admin?date={{ next_date }}">▶</a>
+    </form>
+    {% if closed %}<div class="notice" style="margin-top:8px">이 날은 휴무일입니다.</div>{% endif %}
+  </div>
+  {% if not reservations %}
+    <div class="card"><p class="muted">이 날짜에 예약이 없습니다.</p></div>
+  {% endif %}
+  {% for r in reservations %}
+  <div class="card" {% if r['status'] == 'canceled' %}style="opacity:.55"{% endif %}>
+    <div class="row">
+      <span><b>{{ r['start_at'][11:] }}~{{ r['end_at'][11:] }}</b> {{ r['service_name'] }}</span>
+      <span>{{ status_label[r['status']] }}{% if r['canceled_late'] %} ⚠️마감후취소{% endif %}</span>
+    </div>
+    <div class="row">
+      <span>{{ r['customer_name'] }} ({{ r['phone'] }})</span>
+      <span class="muted">{{ r['source'] }} · {{ r['code'] }} ·
+        <a href="/admin/photos/{{ r['id'] }}">📷 사진</a></span>
+    </div>
+    {% if r['request_note'] %}<p class="muted">요청: {{ r['request_note'] }}</p>{% endif %}
+    {% if r['status'] == 'confirmed' %}
+    <form method="post" action="/admin/status" style="display:flex; gap:8px; margin-top:10px">
+      <input type="hidden" name="reservation_id" value="{{ r['id'] }}">
+      <input type="hidden" name="date" value="{{ date }}">
+      <button class="btn" name="new_status" value="done" style="padding:9px 0">방문 완료</button>
+      <button class="btn secondary" name="new_status" value="noshow" style="padding:9px 0">노쇼</button>
+      <button class="btn secondary" name="new_status" value="canceled" style="padding:9px 0">취소</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% endblock %}

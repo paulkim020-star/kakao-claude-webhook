@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>간편 로그인</h2>
+    <p class="muted">가입 절차 없이 1초 만에 로그인돼요.<br>
+      로그인하면 예약번호 없이 내 예약을 바로 확인·변경할 수 있어요.</p>
+    <div style="margin-top:14px">
+      {% if 'kakao' in providers %}
+        <a class="btn" style="background:#FEE500;color:#191919" href="/booking/login/kakao">카카오로 시작하기</a>
+      {% endif %}
+      {% if 'naver' in providers %}
+        <a class="btn" style="background:#03C75A" href="/booking/login/naver">네이버로 시작하기</a>
+      {% endif %}
+      {% if not providers %}
+        <p class="muted">아직 간편 로그인이 준비되지 않았어요.</p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <p class="muted">로그인 없이 예약하셨나요?<br>
+      예약번호와 휴대폰 번호로 조회할 수 있어요.</p>
+    <div style="margin-top:10px">
+      <a class="btn secondary" href="/booking/lookup">예약번호로 조회하기</a>
+    </div>
+  </div>
+{% endblock %}
