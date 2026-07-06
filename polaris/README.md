@@ -1,0 +1,57 @@
+# POLARIS (폴라리스)
+
+> 오늘의 15분이 10년의 나에게 닿는 것을 매일 눈으로 확인하는 앱.
+
+10년 비전 → 5년 이정표 → 연간 목표 → 월간/주간 계획 → 오늘 할 일이 하나의
+별자리처럼 연결되는, 미니멀 목표 계층형 투두 앱. 기획서(`POLARIS_기획서 v2`)의
+구현체입니다.
+
+이 앱은 저장소의 Python 카카오/예약 서버와 **무관한 독립 프론트엔드**로,
+`polaris/` 아래에서 자체 완결됩니다.
+
+## 스택
+
+- React 18 + TypeScript + Vite
+- Tailwind CSS (디자인 토큰은 `src/index.css`의 CSS 변수 → `tailwind.config.js` 매핑)
+- Zustand + `persist` (localStorage, 서버 불필요)
+- 별자리/도넛 차트: 라이브러리 없이 SVG + CSS 애니메이션
+
+## 실행
+
+```bash
+cd polaris
+npm install
+npm run dev      # 개발 서버
+npm run build    # 타입체크 + 프로덕션 빌드
+npm run preview  # 빌드 결과 미리보기
+```
+
+## 구현 범위 (기획서 §5 기준)
+
+- **1단계 MVP** — 오늘 화면(빠른 추가, 핵심 3, 우선순위 자동 정렬, 완료 빛 모션,
+  목표 색 점), 연간 목표(5개 하드 리밋)와 태스크-목표 연결, 로컬 저장, 역방향 온보딩
+- **2단계** — 주간/월간 뷰, 아침 리추얼, 3회 이월 규칙, 반복 태스크 자동 소멸, 저녁 회고
+- **3단계** — 별자리 화면(북극성/이정표/연간 목표, 밝기 = 최근 활동), 10년 비전 작성,
+  수정 이력, 별 흐려짐
+- **회고** — 목표 연결 비율을 1순위로 둔 3개 지표, 완료 분포 도넛
+
+## 설계 원칙 (기획서 §1.3 / §1.6)
+
+- **노 스트릭 원칙**: 연속일/붉은 X/"놓쳤어요" 표기 없음. 활동은 '누적 빛'(별 밝기,
+  진행 링)으로만 시각화.
+- **오늘이 기본값**: 앱을 열면 오늘 화면. 장기 비전은 원할 때만 줌 아웃.
+- **입력은 3초**: 텍스트 한 줄 + 별 + 시간 칩 + 목표 점. 날짜 미지정 시 인박스로.
+- **최소 자연어 파싱**: "내일/모레/다음주 X요일"만, 결과는 항상 칩으로 표시해 수정 가능.
+
+## 디렉터리
+
+```
+src/
+  types.ts               # 데이터 모델 (§3)
+  store.ts               # Zustand 스토어 + 자정 유지보수
+  lib/                   # 날짜, 우선순위 알고리즘, 영역/데일리 문장 메타
+  components/            # Card, Checkbox, Stars, TimeChip, ProgressRing,
+                         #   QuickAdd, TaskRow, MorningRitual, CarryThriceCard,
+                         #   VisionEditor, TabBar
+  screens/               # Onboarding, Today, Week, Plan, Constellation, Review
+```
