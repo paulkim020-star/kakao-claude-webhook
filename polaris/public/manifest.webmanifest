@@ -1,0 +1,17 @@
+{
+  "name": "POLARIS",
+  "short_name": "POLARIS",
+  "description": "오늘의 15분이 10년의 나에게 닿는 것을 매일 눈으로 확인하는 앱.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF9F6",
+  "theme_color": "#FAF9F6",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -15,6 +15,7 @@ export function TaskRow({ task }: { task: Task }) {
   const setDuration = useStore((s) => s.setDuration)
   const setGoal = useStore((s) => s.setGoal)
   const setDate = useStore((s) => s.setDate)
+  const setRecurring = useStore((s) => s.setRecurring)
   const toggleCore = useStore((s) => s.toggleCore)
   const removeTask = useStore((s) => s.removeTask)
 
@@ -90,6 +91,32 @@ export function TaskRow({ task }: { task: Task }) {
             value={task.duration}
             onChange={(d) => setDuration(task.id, d)}
           />
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {(
+              [
+                ['none', '반복 없음'],
+                ['daily', '매일'],
+                ['weekdays', '평일'],
+                ['weekly', '매주'],
+              ] as const
+            ).map(([val, label]) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setRecurring(task.id, val)}
+                className="rounded-full border px-2.5 py-1 text-xs"
+                style={{
+                  borderColor:
+                    task.recurring === val ? 'var(--ink)' : 'var(--line)',
+                  color:
+                    task.recurring === val ? 'var(--ink)' : 'var(--ink-soft)',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
           {goals.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">

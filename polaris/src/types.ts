@@ -38,6 +38,7 @@ export interface YearlyGoal {
   area: Area
   measure: string // "무엇이 되면 달성인가" 한 줄
   progress: number // 0–100, 월간 목표 완료로 자동 계산
+  createdAt: string // 생성일(YYYY-MM-DD) — 별 흐려짐 판단(§4.5)에 사용
 }
 
 export interface MonthlyGoal {

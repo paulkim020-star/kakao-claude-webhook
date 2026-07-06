@@ -38,6 +38,10 @@ interface State {
   reviews: DailyReview[]
   lastMaintenance: string | null
   lastRitual: string | null
+  startedAt: string | null // 온보딩 완료일 (3일차/7일차 초대 계산용)
+  weeklyFocus: Record<string, string[]> // mondayKey → 연간 목표 id들
+  settings: Settings
+  invitesDismissed: InvitesDismissed
 
   // 온보딩
   completeOnboarding: () => void
@@ -51,12 +55,15 @@ interface State {
   setDuration: (id: string, d: Task['duration']) => void
   setGoal: (id: string, goalId: string | null) => void
   setDate: (id: string, date: string | null) => void
+  setRecurring: (id: string, rec: Task['recurring']) => void
   toggleCore: (id: string) => boolean // false = 이미 3개
   carryToToday: (id: string) => void // "가져오기"
   splitTask: (id: string, titles: string[]) => void
 
   // 목표
-  addYearlyGoal: (g: Omit<YearlyGoal, 'id' | 'progress'>) => string | null
+  addYearlyGoal: (
+    g: Omit<YearlyGoal, 'id' | 'progress' | 'createdAt'>,
+  ) => string | null
   updateYearlyGoal: (id: string, patch: Partial<YearlyGoal>) => void
   removeYearlyGoal: (id: string) => void
   addMonthlyGoal: (g: Omit<MonthlyGoal, 'id' | 'done'>) => void
@@ -65,13 +72,44 @@ interface State {
   // 비전 / 이정표
   saveVision: (narrative: string, keywords: string[]) => void
   addMilestone: (m: Omit<Milestone5, 'id'>) => boolean
+  removeMilestone: (id: string) => void
+
+  // 주간 초점
+  toggleWeeklyFocus: (mondayKey: string, goalId: string) => void
 
   // 회고
   saveReview: (r: DailyReview) => void
 
+  // 설정 / 데이터
+  updateSettings: (patch: Partial<Settings>) => void
+  dismissInvite: (key: keyof InvitesDismissed, value?: string) => void
+  exportData: () => string
+  importData: (json: string) => boolean
+
   // 유지보수
   runMaintenance: () => void
   markRitualSeen: () => void
+}
+
+export interface Settings {
+  // §1.6 #7 알림 최소주의: 기본 0개. 하루 최대 2회(아침·저녁)만.
+  morningReminder: boolean
+  morningTime: string // "08:00"
+  eveningReminder: boolean
+  eveningTime: string // "22:00"
+}
+
+interface InvitesDismissed {
+  milestone: boolean
+  vision: boolean
+  visionRefresh: string | null // 마지막으로 미룬 날짜
+}
+
+const DEFAULT_SETTINGS: Settings = {
+  morningReminder: false,
+  morningTime: '08:00',
+  eveningReminder: false,
+  eveningTime: '22:00',
 }
 
 function recomputeProgress(
@@ -112,8 +150,13 @@ export const useStore = create<State>()(
       reviews: [],
       lastMaintenance: null,
       lastRitual: null,
+      startedAt: null,
+      weeklyFocus: {},
+      settings: DEFAULT_SETTINGS,
+      invitesDismissed: { milestone: false, vision: false, visionRefresh: null },
 
-      completeOnboarding: () => set({ onboarded: true }),
+      completeOnboarding: () =>
+        set((s) => ({ onboarded: true, startedAt: s.startedAt ?? todayKey() })),
       resetAll: () =>
         set({
           onboarded: false,
@@ -125,6 +168,14 @@ export const useStore = create<State>()(
           reviews: [],
           lastMaintenance: null,
           lastRitual: null,
+          startedAt: null,
+          weeklyFocus: {},
+          settings: DEFAULT_SETTINGS,
+          invitesDismissed: {
+            milestone: false,
+            vision: false,
+            visionRefresh: null,
+          },
         }),
 
       addTask: (t) => {
@@ -188,6 +239,11 @@ export const useStore = create<State>()(
           tasks: s.tasks.map((t) => (t.id === id ? { ...t, date } : t)),
         })),
 
+      setRecurring: (id, rec) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) => (t.id === id ? { ...t, recurring: rec } : t)),
+        })),
+
       toggleCore: (id) => {
         const s = get()
         const t = s.tasks.find((x) => x.id === id)
@@ -238,7 +294,10 @@ export const useStore = create<State>()(
         if (s.yearlyGoals.length >= MAX_YEARLY_GOALS) return null
         const id = uid()
         set({
-          yearlyGoals: [...s.yearlyGoals, { ...g, id, progress: 0 }],
+          yearlyGoals: [
+            ...s.yearlyGoals,
+            { ...g, id, progress: 0, createdAt: todayKey() },
+          ],
         })
         return id
       },
@@ -314,10 +373,88 @@ export const useStore = create<State>()(
         return true
       },
 
+      removeMilestone: (id) =>
+        set((s) => ({
+          milestones: s.milestones.filter((m) => m.id !== id),
+          yearlyGoals: s.yearlyGoals.map((g) =>
+            g.milestoneId === id ? { ...g, milestoneId: null } : g,
+          ),
+        })),
+
+      toggleWeeklyFocus: (mondayKey, goalId) =>
+        set((s) => {
+          const cur = s.weeklyFocus[mondayKey] ?? []
+          const next = cur.includes(goalId)
+            ? cur.filter((x) => x !== goalId)
+            : [...cur, goalId]
+          return { weeklyFocus: { ...s.weeklyFocus, [mondayKey]: next } }
+        }),
+
       saveReview: (r) =>
         set((s) => ({
           reviews: [...s.reviews.filter((x) => x.date !== r.date), r],
         })),
+
+      updateSettings: (patch) =>
+        set((s) => ({ settings: { ...s.settings, ...patch } })),
+
+      dismissInvite: (key, value) =>
+        set((s) => {
+          if (key === 'visionRefresh') {
+            return {
+              invitesDismissed: {
+                ...s.invitesDismissed,
+                visionRefresh: value ?? todayKey(),
+              },
+            }
+          }
+          return {
+            invitesDismissed: { ...s.invitesDismissed, [key]: true },
+          }
+        }),
+
+      exportData: () => {
+        const s = get()
+        const payload = {
+          version: 2,
+          exportedAt: new Date().toISOString(),
+          data: {
+            vision: s.vision,
+            milestones: s.milestones,
+            yearlyGoals: s.yearlyGoals,
+            monthlyGoals: s.monthlyGoals,
+            tasks: s.tasks,
+            reviews: s.reviews,
+            weeklyFocus: s.weeklyFocus,
+            settings: s.settings,
+            startedAt: s.startedAt,
+          },
+        }
+        return JSON.stringify(payload, null, 2)
+      },
+
+      importData: (json) => {
+        try {
+          const parsed = JSON.parse(json)
+          const d = parsed?.data ?? parsed
+          if (!d || typeof d !== 'object') return false
+          set((s) => ({
+            vision: d.vision ?? null,
+            milestones: d.milestones ?? [],
+            yearlyGoals: d.yearlyGoals ?? [],
+            monthlyGoals: d.monthlyGoals ?? [],
+            tasks: d.tasks ?? [],
+            reviews: d.reviews ?? [],
+            weeklyFocus: d.weeklyFocus ?? {},
+            settings: { ...DEFAULT_SETTINGS, ...(d.settings ?? {}) },
+            startedAt: d.startedAt ?? s.startedAt,
+            onboarded: true,
+          }))
+          return true
+        } catch {
+          return false
+        }
+      },
 
       markRitualSeen: () => set({ lastRitual: todayKey() }),
 
@@ -368,7 +505,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'polaris-v1',
-      version: 1,
+      version: 2,
     },
   ),
 )

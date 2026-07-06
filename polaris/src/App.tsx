@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useStore } from './store'
+import { useReminders } from './lib/reminders'
 import { TabBar, type Tab } from './components/TabBar'
 import { Onboarding } from './screens/Onboarding'
 import { Today } from './screens/Today'
@@ -11,12 +12,16 @@ import { Review } from './screens/Review'
 export default function App() {
   const onboarded = useStore((s) => s.onboarded)
   const runMaintenance = useStore((s) => s.runMaintenance)
+  const settings = useStore((s) => s.settings)
   const [tab, setTab] = useState<Tab>('today')
 
   // 앱 진입 시 자정 유지보수 (반복 태스크 소멸/생성)
   useEffect(() => {
     runMaintenance()
   }, [runMaintenance])
+
+  // 사용자가 켠 알림만 스케줄 (§1.6 #7)
+  useReminders(settings)
 
   if (!onboarded) return <Onboarding />
 

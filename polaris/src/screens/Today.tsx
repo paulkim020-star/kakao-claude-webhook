@@ -8,11 +8,18 @@ import { TaskRow } from '../components/TaskRow'
 import { QuickAdd } from '../components/QuickAdd'
 import { MorningRitual } from '../components/MorningRitual'
 import { CarryThriceCard } from '../components/CarryThriceCard'
+import { InviteCards } from '../components/InviteCards'
+import { Settings } from './Settings'
+import { MilestoneEditor } from '../components/MilestoneEditor'
+import { VisionEditor } from '../components/VisionEditor'
 
 export function Today() {
   const tasks = useStore((s) => s.tasks)
   const [addOpen, setAddOpen] = useState(false)
   const [showAux, setShowAux] = useState(false)
+  const [modal, setModal] = useState<null | 'settings' | 'milestone' | 'vision'>(
+    null,
+  )
   const today = todayKey()
 
   const todays = useMemo(
@@ -44,9 +51,31 @@ export function Today() {
             {dailyLine(today)}
           </p>
         </div>
-        <ProgressRing value={pct} size={40} showLabel />
+        <div className="flex items-center gap-2">
+          <ProgressRing value={pct} size={40} showLabel />
+          <button
+            type="button"
+            onClick={() => setModal('settings')}
+            aria-label="프로필"
+            className="grid h-10 w-10 place-items-center rounded-full border border-line text-ink-soft"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="8" r="3.4" stroke="currentColor" strokeWidth="1.6" />
+              <path
+                d="M5 19.5c0-3.3 3.1-5 7-5s7 1.7 7 5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
       </header>
 
+      <InviteCards
+        onDrawMilestone={() => setModal('milestone')}
+        onDrawVision={() => setModal('vision')}
+      />
       <MorningRitual />
       {thrice && <CarryThriceCard task={thrice} />}
 
@@ -130,6 +159,10 @@ export function Today() {
       </div>
 
       <QuickAdd open={addOpen} onClose={() => setAddOpen(false)} defaultDate={today} />
+
+      {modal === 'settings' && <Settings onClose={() => setModal(null)} />}
+      {modal === 'milestone' && <MilestoneEditor onClose={() => setModal(null)} />}
+      {modal === 'vision' && <VisionEditor onClose={() => setModal(null)} />}
     </div>
   )
 }

@@ -4,14 +4,24 @@ import { AREAS, areaColor } from '../lib/meta'
 import { Card } from '../components/Card'
 import { ProgressRing } from '../components/ProgressRing'
 import { Checkbox } from '../components/Checkbox'
+import { MilestoneEditor } from '../components/MilestoneEditor'
 import type { Area } from '../types'
 
 export function Plan() {
   const [view, setView] = useState<'yearly' | 'monthly'>('yearly')
+  const milestones = useStore((s) => s.milestones)
+  const [showMilestones, setShowMilestones] = useState(false)
   return (
     <div className="mx-auto max-w-[440px] px-5 pb-28 pt-3">
-      <header className="mb-4">
+      <header className="mb-4 flex items-center justify-between">
         <h1 className="font-display text-2xl">계획</h1>
+        <button
+          type="button"
+          onClick={() => setShowMilestones(true)}
+          className="rounded-full border border-line px-3 py-1.5 text-sm text-ink-soft"
+        >
+          5년 이정표 {milestones.length > 0 && `· ${milestones.length}`}
+        </button>
       </header>
 
       <div className="mb-5 flex rounded-full border border-line p-1 text-sm">
@@ -32,6 +42,10 @@ export function Plan() {
       </div>
 
       {view === 'yearly' ? <YearlyView /> : <MonthlyView />}
+
+      {showMilestones && (
+        <MilestoneEditor onClose={() => setShowMilestones(false)} />
+      )}
     </div>
   )
 }
@@ -39,6 +53,7 @@ export function Plan() {
 function YearlyView() {
   const goals = useStore((s) => s.yearlyGoals)
   const monthly = useStore((s) => s.monthlyGoals)
+  const milestones = useStore((s) => s.milestones)
   const addGoal = useStore((s) => s.addYearlyGoal)
   const removeGoal = useStore((s) => s.removeYearlyGoal)
 
@@ -46,14 +61,16 @@ function YearlyView() {
   const [title, setTitle] = useState('')
   const [measure, setMeasure] = useState('')
   const [area, setArea] = useState<Area>('growth')
+  const [milestoneId, setMilestoneId] = useState<string | null>(null)
 
   const full = goals.length >= MAX_YEARLY_GOALS
 
   const save = () => {
     if (!title.trim()) return
-    addGoal({ title: title.trim(), measure: measure.trim(), area, milestoneId: null })
+    addGoal({ title: title.trim(), measure: measure.trim(), area, milestoneId })
     setTitle('')
     setMeasure('')
+    setMilestoneId(null)
     setAdding(false)
   }
 
@@ -124,6 +141,43 @@ function YearlyView() {
               </button>
             ))}
           </div>
+          {milestones.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-xs text-ink-soft">
+                5년 이정표에 연결 (선택)
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMilestoneId(null)}
+                  className="rounded-full border px-3 py-1.5 text-sm"
+                  style={{
+                    borderColor:
+                      milestoneId === null ? 'var(--ink)' : 'var(--line)',
+                    color: milestoneId === null ? 'var(--ink)' : 'var(--ink-soft)',
+                  }}
+                >
+                  없음
+                </button>
+                {milestones.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setMilestoneId(m.id)}
+                    className="rounded-full border px-3 py-1.5 text-sm"
+                    style={{
+                      borderColor:
+                        milestoneId === m.id ? 'var(--ink)' : 'var(--line)',
+                      color:
+                        milestoneId === m.id ? 'var(--ink)' : 'var(--ink-soft)',
+                    }}
+                  >
+                    {m.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex gap-2">
             <button
               type="button"

@@ -33,6 +33,11 @@ export function weekdayIndex(key: string): number {
   return parse(key).getDay()
 }
 
+// a → b 사이의 일수 (b가 뒤면 양수)
+export function daysBetween(a: string, b: string): number {
+  return Math.floor((parse(b).getTime() - parse(a).getTime()) / 86400000)
+}
+
 // 최소 자연어 파싱 (§4.2): "내일 / 모레 / 다음주 X요일" 수준만.
 // 파싱 결과는 항상 칩으로 표시해 한 탭에 수정 가능 (불만 #5 대응).
 const WEEKDAY_WORDS: Record<string, number> = {

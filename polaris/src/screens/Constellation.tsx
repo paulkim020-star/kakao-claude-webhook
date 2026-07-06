@@ -5,6 +5,7 @@ import {
   daysSinceActivity,
   recentCompletions,
 } from '../lib/meta'
+import { daysBetween, todayKey } from '../lib/dates'
 import { VisionEditor } from '../components/VisionEditor'
 
 const W = 360
@@ -38,12 +39,15 @@ export function Constellation() {
     [goals.length],
   )
 
+  const today = todayKey()
   const goalMeta = goals.map((g) => {
     const recent = recentCompletions(tasks, g.id, 30)
     const idle = daysSinceActivity(tasks, g.id)
     // 밝기 = 최근 활동량, 최소 0.32
     const brightness = Math.min(1, 0.32 + recent * 0.12)
-    const fading = idle > 14 && recent === 0
+    // 생긴 지 2주가 지난 목표만 흐려질 수 있다 (갓 만든 별은 흐리지 않다)
+    const ageDays = daysBetween(g.createdAt ?? today, today)
+    const fading = recent === 0 && ageDays > 14
     return { recent, idle, brightness, fading }
   })
   const fadingGoal = goals.find((_, i) => goalMeta[i].fading)
