@@ -16,7 +16,7 @@ import { VisionEditor } from '../components/VisionEditor'
 export function Today() {
   const tasks = useStore((s) => s.tasks)
   const [addOpen, setAddOpen] = useState(false)
-  const [showAux, setShowAux] = useState(false)
+  const [showAux, setShowAux] = useState(true) // 추가한 일이 묻히지 않게 기본 펼침
   const [modal, setModal] = useState<null | 'settings' | 'milestone' | 'vision'>(
     null,
   )

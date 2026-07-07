@@ -26,7 +26,7 @@ export function TaskRow({ task }: { task: Task }) {
 
   const promote = () => {
     const ok = toggleCore(task.id)
-    if (!ok) setNote('핵심은 3개까지예요. 하나와 바꿀까요?')
+    if (!ok) setNote('핵심은 3개까지예요. 나머지도 보조 태스크로 다 기록돼요.')
     else setNote(null)
   }
 

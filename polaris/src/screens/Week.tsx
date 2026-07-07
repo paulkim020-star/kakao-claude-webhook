@@ -5,6 +5,7 @@ import { areaColor, goalColor } from '../lib/meta'
 import { Card, GoalDot } from '../components/Card'
 import { Checkbox } from '../components/Checkbox'
 import { WeeklyPlanner } from '../components/WeeklyPlanner'
+import { QuickAdd } from '../components/QuickAdd'
 import type { Task } from '../types'
 
 const DOW = ['월', '화', '수', '목', '금', '토', '일']
@@ -20,6 +21,7 @@ export function Week() {
   const [planning, setPlanning] = useState(false)
   const [dragId, setDragId] = useState<string | null>(null)
   const [dropDay, setDropDay] = useState<string | null>(null)
+  const [addDay, setAddDay] = useState<string | null>(null) // 이 날짜로 추가
 
   const today = todayKey()
   const monday = useMemo(
@@ -160,6 +162,14 @@ export function Week() {
                     style={{ background: areaColor(focusG.area) }}
                   />
                 )}
+                <button
+                  type="button"
+                  onClick={() => setAddDay(d)}
+                  className="ml-auto rounded-full px-2 py-0.5 text-sm text-ink-soft"
+                  aria-label={`${DOW[i]}요일에 추가`}
+                >
+                  + 추가
+                </button>
               </div>
               <Card
                 className={`px-4 py-1 transition-shadow ${
@@ -167,9 +177,17 @@ export function Week() {
                 }`}
               >
                 {dayTasks.length === 0 ? (
-                  <p className="py-3 text-sm text-ink-soft">
-                    {isDrop ? '여기로 옮겨요' : '비어 있어요'}
-                  </p>
+                  isDrop ? (
+                    <p className="py-3 text-sm text-ink-soft">여기로 옮겨요</p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setAddDay(d)}
+                      className="w-full py-3 text-left text-sm text-ink-soft"
+                    >
+                      + 이 날에 할 일 추가
+                    </button>
+                  )
                 ) : (
                   dayTasks.map((t) => (
                     <WeekTaskItem
@@ -224,6 +242,12 @@ export function Week() {
       </section>
 
       {planning && <WeeklyPlanner onClose={() => setPlanning(false)} />}
+
+      <QuickAdd
+        open={addDay !== null}
+        onClose={() => setAddDay(null)}
+        defaultDate={addDay}
+      />
     </div>
   )
 }
