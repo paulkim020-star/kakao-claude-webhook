@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 종이(실행 세계) */
+  --paper: #faf9f6;
+  --paper-raised: #ffffff;
+  --ink: #1c2733;
+  --ink-soft: #5c6b7a;
+  --line: #e8e5de;
+
+  /* 밤하늘(비전 세계) */
+  --night: #0e1626;
+  --night-raised: #17233a;
+  --starlight: #f5efdc;
+
+  /* 단 하나의 액션 색 */
+  --dawn: #e8a03c;
+  --dawn-soft: #f6e3c2;
+
+  /* 삶의 영역 6색 */
+  --area-career: #4a7ba6;
+  --area-health: #5e8c6a;
+  --area-relation: #b06a5e;
+  --area-money: #8a7b4f;
+  --area-growth: #7c6c9e;
+  --area-life: #5a8e8c;
+
+  --font-display: 'Gowun Batang', 'Noto Serif KR', serif;
+  --font-body: 'Pretendard Variable', 'Pretendard', -apple-system, sans-serif;
+  --font-num: 'IBM Plex Mono', monospace;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 180ms;
+  --dur-base: 320ms;
+  --dur-story: 600ms;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 디스플레이 서체 (시간의 무게가 실리는 자리) */
+.font-display {
+  font-family: var(--font-display);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+/* 포커스 링 */
+:focus-visible {
+  outline: 2px solid var(--dawn);
+  outline-offset: 2px;
+}
+
+/* ─── 완료의 순간: 빛 입자 (§4.2 시그니처 모션) ─── */
+@keyframes light-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-120px) scale(1.1);
+  }
+}
+.light-particle {
+  animation: light-rise var(--dur-story) var(--ease-out) forwards;
+}
+
+/* ─── 별자리 발광 (§4.5) ─── */
+@keyframes constellation-glow {
+  0%,
+  100% {
+    opacity: var(--glow-min, 0.35);
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes line-pulse {
+  0% {
+    stroke-opacity: 0.1;
+  }
+  50% {
+    stroke-opacity: 0.6;
+  }
+  100% {
+    stroke-opacity: 0.1;
+  }
+}
+.star-glow {
+  animation: constellation-glow 4.5s var(--ease-out) infinite;
+}
+.link-pulse {
+  animation: line-pulse 2s var(--ease-out) both;
+}
+
+/* ─── 카드/화면 등장 ─── */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up var(--dur-base) var(--ease-out) both;
+}
+
+/* 접근성: 모션 최소화 시 이동/입자 제거, 불투명도 전환만 유지 */
+@media (prefers-reduced-motion: reduce) {
+  .light-particle,
+  .animate-fade-up,
+  .star-glow,
+  .link-pulse {
+    animation: none !important;
+  }
+  /* 발광 애니메이션은 정적 하이라이트로 대체 (§4.5) */
+  .link-pulse {
+    stroke-opacity: 0.4 !important;
+  }
+  * {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 스크롤바 절제 */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
