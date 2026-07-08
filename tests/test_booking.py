@@ -384,6 +384,41 @@ def test_reserve_rejects_bad_photo_type(client, photo_dir):
     assert count == 0  # 사진이 거절되면 예약도 생성되지 않음
 
 
+def test_admin_customer_archive(client, photo_dir):
+    date = _future_open_date()
+    auth = ("admin", "changeme")
+    # 같은 고객(전화번호)으로 예약 2건
+    for t in ("11:00", "15:00"):
+        client.post("/booking/reserve", data={
+            "service_id": 1, "start": f"{date}T{t}",
+            "customer_name": "단골손님", "phone": "010-7070-6060", "request_note": "",
+        })
+    conn = db.get_conn()
+    rid = conn.execute(
+        "SELECT id FROM reservation WHERE phone = '01070706060' LIMIT 1"
+    ).fetchone()["id"]
+    conn.close()
+    # 한 건은 방문 완료 처리 + 결과 사진 기록
+    client.post("/admin/status", auth=auth, data={
+        "reservation_id": rid, "new_status": "done", "date": date,
+    }, follow_redirects=False)
+    client.post(f"/admin/photos/{rid}", auth=auth,
+                files={"front": ("f.png", PNG, "image/png")}, follow_redirects=False)
+
+    # 고객 목록: 이름/방문 횟수 노출 (인증 필수)
+    assert client.get("/admin/customers").status_code == 401
+    res = client.get("/admin/customers", auth=auth)
+    assert "단골손님" in res.text and "방문 1회" in res.text
+    # 검색
+    res = client.get("/admin/customers?q=단골", auth=auth)
+    assert "단골손님" in res.text
+
+    # 히스토리: 예약 2건 + 결과 사진 + 사진 라벨 노출
+    res = client.get("/admin/customers/01070706060", auth=auth)
+    assert res.text.count(f"{date}") >= 2
+    assert "정면" in res.text and "/admin/photos/file/" in res.text
+
+
 def test_admin_result_photos_replace_per_angle(client, photo_dir):
     date = _future_open_date()
     client.post("/booking/reserve", data={

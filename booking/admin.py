@@ -169,6 +169,76 @@ def manual_new(
         conn.close()
 
 
+PHOTO_KIND_LABEL = {
+    "reference": "희망 스타일", "front": "정면", "side": "측면", "back": "뒷면",
+}
+
+
+@router.get("/customers")
+def customers_view(request: Request, q: str = ""):
+    """고객 아카이브: 전화번호 기준으로 방문 이력을 묶어 보여줌."""
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT customer_name, phone, status, start_at FROM reservation"
+            " ORDER BY start_at DESC"
+        ).fetchall()
+        groups: dict[str, dict] = {}
+        for r in rows:
+            g = groups.setdefault(r["phone"], {
+                "name": r["customer_name"], "phone": r["phone"],
+                "total": 0, "done": 0, "noshow": 0, "last": r["start_at"],
+            })
+            g["total"] += 1
+            if r["status"] == "done":
+                g["done"] += 1
+            elif r["status"] == "noshow":
+                g["noshow"] += 1
+        customers = list(groups.values())
+        if q.strip():
+            needle = q.strip()
+            digits = "".join(ch for ch in needle if ch.isdigit())
+            customers = [
+                c for c in customers
+                if needle in c["name"] or (digits and digits in c["phone"])
+            ]
+        return _render(request, conn, "admin_customers.html",
+                       customers=customers, q=q)
+    finally:
+        conn.close()
+
+
+@router.get("/customers/{phone}")
+def customer_history(request: Request, phone: str):
+    """고객 1명의 시술 아카이브: 방문 이력 + 희망 스타일/시술 결과 사진."""
+    conn = get_conn()
+    try:
+        reservations = conn.execute(
+            "SELECT r.*, s.name AS service_name FROM reservation r"
+            " JOIN service s ON s.id = r.service_id"
+            " WHERE r.phone = ? ORDER BY r.start_at DESC",
+            (phone,),
+        ).fetchall()
+        if not reservations:
+            return RedirectResponse("/admin/customers", status_code=303)
+        photos_by_res: dict[int, list] = {}
+        for p in conn.execute(
+            "SELECT p.* FROM photo p JOIN reservation r ON r.id = p.reservation_id"
+            " WHERE r.phone = ? ORDER BY p.id",
+            (phone,),
+        ).fetchall():
+            photos_by_res.setdefault(p["reservation_id"], []).append(p)
+        done = sum(1 for r in reservations if r["status"] == "done")
+        noshow = sum(1 for r in reservations if r["status"] == "noshow")
+        return _render(request, conn, "admin_history.html",
+                       reservations=reservations, photos_by_res=photos_by_res,
+                       customer_name=reservations[0]["customer_name"], phone=phone,
+                       done=done, noshow=noshow,
+                       photo_kind_label=PHOTO_KIND_LABEL)
+    finally:
+        conn.close()
+
+
 @router.get("/photos/file/{photo_id}")
 def photo_file(photo_id: int):
     """사진 원본 서빙 (관리자 인증 필수 - 공개 정적 경로로 노출 금지)."""

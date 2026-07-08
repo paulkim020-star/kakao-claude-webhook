@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>{{ customer_name }} <span class="muted">{{ phone }}</span></h2>
+    <p class="muted">방문 {{ done }}회{% if noshow %} · ⚠️ 노쇼 {{ noshow }}회{% endif %}
+      · <a href="/admin/customers">← 고객 목록</a></p>
+  </div>
+  {% for r in reservations %}
+  <div class="card" {% if r['status'] == 'canceled' %}style="opacity:.55"{% endif %}>
+    <div class="row">
+      <span><b>{{ r['start_at'].replace('T', ' ') }}</b> {{ r['service_name'] }}</span>
+      <span>{{ status_label[r['status']] }}</span>
+    </div>
+    {% if r['request_note'] %}<p class="muted" style="margin-top:6px">요청: {{ r['request_note'] }}</p>{% endif %}
+    {% set plist = photos_by_res.get(r['id'], []) %}
+    {% if plist %}
+    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap">
+      {% for p in plist %}
+      <figure style="width:23%; margin:0">
+        <img src="/admin/photos/file/{{ p['id'] }}" alt="{{ photo_kind_label[p['kind']] }}"
+             style="width:100%; border-radius:8px; display:block">
+        <figcaption class="muted" style="text-align:center; font-size:11px; margin-top:3px">
+          {{ photo_kind_label[p['kind']] }}</figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <p class="muted" style="margin-top:10px">
+      <a href="/admin/photos/{{ r['id'] }}">📷 사진 기록/추가</a></p>
+  </div>
+  {% endfor %}
+{% endblock %}

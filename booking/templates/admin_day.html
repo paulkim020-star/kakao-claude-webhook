@@ -3,6 +3,7 @@
   <div class="card">
     <h2>관리자 · 예약 현황</h2>
     <p class="muted"><a href="/admin/new?date={{ date }}">+ 수기 예약</a> ·
+       <a href="/admin/customers">고객 아카이브</a> ·
        <a href="/admin/services">메뉴 관리</a> ·
        <a href="/admin/settings">영업시간/휴무</a></p>
     <form method="get" action="/admin" style="margin-top:8px; display:flex; gap:8px; align-items:center">
@@ -22,7 +23,8 @@
       <span>{{ status_label[r['status']] }}{% if r['canceled_late'] %} ⚠️마감후취소{% endif %}</span>
     </div>
     <div class="row">
-      <span>{{ r['customer_name'] }} ({{ r['phone'] }})</span>
+      <span><a href="/admin/customers/{{ r['phone'] }}"
+               style="color:inherit">{{ r['customer_name'] }}</a> ({{ r['phone'] }})</span>
       <span class="muted">{{ r['source'] }} · {{ r['code'] }} ·
         <a href="/admin/photos/{{ r['id'] }}">📷 사진</a></span>
     </div>

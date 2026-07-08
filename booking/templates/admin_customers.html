@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>고객 아카이브</h2>
+    <p class="muted"><a href="/admin">← 예약 현황으로</a></p>
+    <form method="get" action="/admin/customers" style="margin-top:10px">
+      <input type="text" name="q" value="{{ q }}" placeholder="이름 또는 전화번호로 검색">
+    </form>
+  </div>
+  {% if not customers %}
+    <div class="card"><p class="muted">아직 기록된 고객이 없습니다.</p></div>
+  {% endif %}
+  {% for c in customers %}
+  <a href="/admin/customers/{{ c['phone'] }}" style="text-decoration:none; color:inherit">
+    <div class="card">
+      <div class="row">
+        <span><b>{{ c['name'] }}</b> <span class="muted">{{ c['phone'] }}</span></span>
+        <span class="muted">최근 {{ c['last'][:10] }}</span>
+      </div>
+      <div class="row">
+        <span>방문 {{ c['done'] }}회 · 예약 {{ c['total'] }}건</span>
+        <span>{% if c['noshow'] %}⚠️ 노쇼 {{ c['noshow'] }}회{% endif %}</span>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+{% endblock %}
