@@ -56,6 +56,10 @@ app.include_router(booking_admin.router)
 # 예약 웹앱의 공개 URL (배포 주소). 챗봇이 예약 링크를 안내할 때 사용.
 BOOKING_BASE_URL = os.environ.get("BOOKING_BASE_URL", "http://localhost:8000")
 
+# 카카오톡 채널 1:1 채팅 URL (예: http://pf.kakao.com/_abc123/chat).
+# 설정하면 웹에 "카카오톡 문의" 버튼이 생기고, 챗봇이 상담 요청을 원장 직접 응대로 안내.
+KAKAO_CHANNEL_URL = os.environ.get("KAKAO_CHANNEL_URL", "")
+
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 SYSTEM_PROMPT = os.environ.get(
@@ -111,6 +115,20 @@ async def kakao_webhook(request: Request):
     if not utterance:
         return JSONResponse(
             _kakao_simple_text_response("메시지를 인식하지 못했어요. 다시 말씀해 주세요.")
+        )
+
+    # 상담(사람 연결) 요청은 원장 직접 응대로 안내
+    # (카카오톡 채널 1:1 채팅이 준비된 경우에만 - KAKAO_CHANNEL_URL 설정 여부로 판단)
+    if KAKAO_CHANNEL_URL and any(
+        k in utterance for k in ("상담", "문의", "원장님", "사장님")
+    ):
+        return JSONResponse(
+            _kakao_simple_text_response(
+                "네, 원장님께 직접 문의를 도와드릴게요 💬\n\n"
+                "이 채팅방에 문의 내용을 남겨주시면 원장님이 확인 후 직접 답장드립니다. "
+                "(원장님 답변은 시술 중일 때 조금 늦을 수 있어요)\n\n"
+                f"바로 연결: {KAKAO_CHANNEL_URL}"
+            )
         )
 
     # "예약" 관련 발화는 Claude를 거치지 않고 예약 웹앱으로 바로 안내

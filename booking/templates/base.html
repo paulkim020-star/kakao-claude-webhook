@@ -134,6 +134,14 @@
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
   {% if message %}<div class="success">{{ message }}</div>{% endif %}
   {% block content %}{% endblock %}
+  {% if kakao_channel_url %}
+  <a href="{{ kakao_channel_url }}" target="_blank" rel="noopener"
+     style="display:flex; align-items:center; justify-content:center; gap:8px;
+            margin-top:14px; padding:13px; border-radius:12px; background:#FEE500;
+            color:#191919; font-size:14px; font-weight:700; text-decoration:none;
+            box-shadow:0 2px 8px rgba(120,100,70,.12)">
+    💬 카카오톡으로 원장님께 문의하기</a>
+  {% endif %}
   <footer><a href="/booking/lookup">내 예약 조회 · 변경 · 취소</a></footer>
 </div>
 </body>

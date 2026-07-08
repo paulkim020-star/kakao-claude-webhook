@@ -1,5 +1,6 @@
 """고객용 예약 웹 (/booking). 모바일 웹 기준의 서버 렌더링 페이지."""
 
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -13,6 +14,8 @@ from booking.db import get_conn, get_config
 
 router = APIRouter(prefix="/booking")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+# 카카오톡 채널 1:1 채팅 URL - 설정 시 모든 페이지에 문의 버튼 노출
+templates.env.globals["kakao_channel_url"] = os.environ.get("KAKAO_CHANNEL_URL", "")
 
 
 def _render(request: Request, conn, name: str, **context):

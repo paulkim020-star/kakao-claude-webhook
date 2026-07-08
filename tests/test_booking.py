@@ -223,6 +223,25 @@ def test_webhook_booking_intent(client):
     assert "/booking" in text
 
 
+def test_webhook_consult_intent_and_chat_button(client, monkeypatch):
+    import main
+    from booking import web
+
+    channel = "http://pf.kakao.com/_test/chat"
+    monkeypatch.setattr(main, "KAKAO_CHANNEL_URL", channel)
+    monkeypatch.setitem(web.templates.env.globals, "kakao_channel_url", channel)
+
+    # 챗봇: 상담 발화 → 원장 직접 응대 안내
+    payload = {"userRequest": {"utterance": "원장님께 문의드리고 싶어요", "user": {"id": "u2"}}}
+    res = client.post("/kakao/webhook", json=payload)
+    text = res.json()["template"]["outputs"][0]["simpleText"]["text"]
+    assert channel in text and "원장님" in text
+
+    # 웹: 모든 페이지 하단에 카카오톡 문의 버튼 노출
+    res = client.get("/booking")
+    assert channel in res.text and "문의하기" in res.text
+
+
 # ---------- 소셜 로그인 ----------
 
 def test_session_cookie_sign_and_tamper():

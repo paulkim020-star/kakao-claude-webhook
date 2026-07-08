@@ -42,6 +42,7 @@ SESSION_MAX_AGE = 60 * 60 * 24 * 30  # 30일
 
 router = APIRouter(prefix="/booking")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+templates.env.globals["kakao_channel_url"] = os.environ.get("KAKAO_CHANNEL_URL", "")
 
 
 def available_providers() -> list[str]:

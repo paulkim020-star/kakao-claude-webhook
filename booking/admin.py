@@ -46,6 +46,7 @@ def _admin_auth(credentials: HTTPBasicCredentials = Depends(_security)) -> str:
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(_admin_auth)])
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+templates.env.globals["kakao_channel_url"] = os.environ.get("KAKAO_CHANNEL_URL", "")
 
 STATUS_LABEL = {
     "confirmed": "확정",
