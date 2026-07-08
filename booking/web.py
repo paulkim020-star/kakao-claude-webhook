@@ -1,7 +1,7 @@
 """고객용 예약 웹 (/booking). 모바일 웹 기준의 서버 렌더링 페이지."""
 
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
@@ -38,6 +38,29 @@ def _date_label(date_str: str) -> str:
     return f"{d.month}월 {d.day}일 ({'월화수목금토일'[d.weekday()]})"
 
 
+def _day_chips(conn, selected: str, count: int = 14) -> list[dict]:
+    """가로 스크롤 날짜 선택 칩: 오늘부터 2주, 휴무일 표시."""
+    config = get_config(conn)
+    today = engine.now_kst()
+    chips = []
+    for i in range(count):
+        d = today + timedelta(days=i)
+        date_str = d.strftime("%Y-%m-%d")
+        chips.append({
+            "date": date_str,
+            "dow": "오늘" if i == 0 else "월화수목금토일"[d.weekday()],
+            "num": d.day,
+            "closed": engine.is_closed_day(conn, config, date_str),
+            "on": date_str == selected,
+        })
+    return chips
+
+
+def _split_slots(slots: list[str]) -> tuple[list[str], list[str]]:
+    """오전/오후 그룹으로 분리."""
+    return [t for t in slots if t < "12:00"], [t for t in slots if t >= "12:00"]
+
+
 def _my_context(conn, reservation) -> dict:
     """my.html 렌더링용: 예약 + 고객이 올린 희망 스타일 사진."""
     ref_photos = [
@@ -70,8 +93,11 @@ def choose_time(request: Request, service_id: int, date: str = ""):
         today = engine.now_kst().strftime("%Y-%m-%d")
         date = date or today
         slots = engine.available_slots(conn, service["duration_min"], date)
+        slots_am, slots_pm = _split_slots(slots)
         return _render(request, conn, "time.html", service=service,
                        date=date, today=today, slots=slots, change_mode=False,
+                       slots_am=slots_am, slots_pm=slots_pm,
+                       day_chips=_day_chips(conn, date),
                        date_label=_date_label(date))
     finally:
         conn.close()
@@ -262,8 +288,11 @@ def change_form(request: Request, code: str, phone: str, date: str = ""):
         service = conn.execute(
             "SELECT * FROM service WHERE id = ?", (reservation["service_id"],)
         ).fetchone()
+        slots_am, slots_pm = _split_slots(slots)
         return _render(request, conn, "time.html", service=service,
                        date=date, today=today, slots=slots,
+                       slots_am=slots_am, slots_pm=slots_pm,
+                       day_chips=_day_chips(conn, date),
                        change_mode=True, code=reservation["code"],
                        phone=reservation["phone"], date_label=_date_label(date))
     finally:

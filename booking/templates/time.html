@@ -10,37 +10,50 @@
       <p class="muted">{{ service['name'] }} · {{ service['duration_min'] }}분 ·
         {{ "{:,}".format(service['base_price']) }}원{% if service['extra_charge_note'] %}~ ({{ service['extra_charge_note'] }}){% endif %}</p>
     {% endif %}
-    <form method="get" action="{{ '/booking/change' if change_mode else '/booking/time' }}">
-      {% if change_mode %}
-        <input type="hidden" name="code" value="{{ code }}">
-        <input type="hidden" name="phone" value="{{ phone }}">
-      {% else %}
-        <input type="hidden" name="service_id" value="{{ service['id'] }}">
-      {% endif %}
-      <label>날짜</label>
-      <input type="date" name="date" value="{{ date }}" min="{{ today }}" onchange="this.form.submit()">
-    </form>
+    <div class="daystrip">
+      {% for c in day_chips %}
+        {% set href = ('/booking/change?code=' ~ code ~ '&phone=' ~ phone ~ '&date=' ~ c['date'])
+                      if change_mode else ('/booking/time?service_id=' ~ service['id'] ~ '&date=' ~ c['date']) %}
+        {% if c['closed'] %}
+          <span class="daychip off"><span class="dow">{{ c['dow'] }}</span>
+            <span class="num">{{ c['num'] }}</span><span class="dow">휴무</span></span>
+        {% else %}
+          <a class="daychip {{ 'on' if c['on'] }}" href="{{ href }}">
+            <span class="dow">{{ c['dow'] }}</span><span class="num">{{ c['num'] }}</span></a>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <details class="otherdate">
+      <summary>2주 이후 날짜 직접 선택</summary>
+      <form method="get" action="{{ '/booking/change' if change_mode else '/booking/time' }}">
+        {% if change_mode %}
+          <input type="hidden" name="code" value="{{ code }}">
+          <input type="hidden" name="phone" value="{{ phone }}">
+        {% else %}
+          <input type="hidden" name="service_id" value="{{ service['id'] }}">
+        {% endif %}
+        <input type="date" name="date" value="{{ date }}" min="{{ today }}" onchange="this.form.submit()">
+      </form>
+    </details>
   </div>
   <div class="card">
     {% if slots %}
-      <h2><span class="hl">{{ date_label }}</span> 예약 가능 시간</h2>
-      <div class="slots" style="margin-top:10px">
-        {% for t in slots %}
-          {% if change_mode %}
-            <form method="post" action="/booking/change">
-              <input type="hidden" name="code" value="{{ code }}">
-              <input type="hidden" name="phone" value="{{ phone }}">
-              <input type="hidden" name="new_start" value="{{ date }}T{{ t }}">
-              <button type="submit">{{ t }}</button>
-            </form>
-          {% else %}
-            <a href="/booking/form?service_id={{ service['id'] }}&start={{ date }}T{{ t }}">{{ t }}</a>
-          {% endif %}
-        {% endfor %}
-      </div>
+      <h2><span class="hl">{{ date_label }}</span></h2>
+      {% if slots_am %}
+        <p class="slot-group">🌅 오전</p>
+        <div class="slots">
+          {% for t in slots_am %}{% include "_slot_button.html" %}{% endfor %}
+        </div>
+      {% endif %}
+      {% if slots_pm %}
+        <p class="slot-group">☀️ 오후</p>
+        <div class="slots">
+          {% for t in slots_pm %}{% include "_slot_button.html" %}{% endfor %}
+        </div>
+      {% endif %}
     {% else %}
-      <h2>예약 가능한 시간이 없어요</h2>
-      <p class="muted">휴무일이거나 예약이 모두 찼습니다. 다른 날짜를 선택해 주세요.</p>
+      <h2>{{ date_label }}</h2>
+      <p class="muted">이 날은 예약 가능한 시간이 없어요.<br>다른 날짜를 선택해 주세요.</p>
     {% endif %}
   </div>
   </div>

@@ -60,6 +60,29 @@
   .btn.secondary:hover { border-color: #c26a52; color: #c26a52; }
   .btn + .btn, form + .btn, .btn + form { margin-top: 10px; }
 
+  /* 날짜 선택: 가로 스크롤 칩 */
+  .daystrip { display: flex; gap: 8px; overflow-x: auto; padding: 10px 2px 6px;
+              scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .daystrip::-webkit-scrollbar { display: none; }
+  .daychip { flex: 0 0 56px; display: flex; flex-direction: column; align-items: center;
+             gap: 1px; padding: 10px 0 8px; border-radius: 14px;
+             border: 1.5px solid #e2d6bf; background: #fffdf8; text-decoration: none;
+             color: #6b5b45; transition: all .12s; }
+  .daychip .dow { font-size: 10.5px; color: #a1937f; font-weight: 600; }
+  .daychip .num { font-family: Georgia, serif; font-size: 18px; font-weight: 700; }
+  .daychip:hover { border-color: #c26a52; transform: translateY(-1px); }
+  .daychip.on { background: #c26a52; border-color: #c26a52; color: #fff;
+                box-shadow: 0 3px 10px rgba(194,106,82,.3); }
+  .daychip.on .dow { color: #f3d4c9; }
+  .daychip.off { opacity: .38; }
+  .daychip.off:hover { border-color: #e2d6bf; transform: none; }
+  .slot-group { font-size: 12px; font-weight: 700; color: #8a795f;
+                letter-spacing: 1.5px; margin: 16px 0 9px; }
+  details.otherdate summary { cursor: pointer; font-size: 12.5px; color: #97897a;
+                margin-top: 8px; list-style: none; }
+  details.otherdate summary::before { content: "📅 "; }
+  details.otherdate form { margin-top: 8px; }
+
   /* 시간 슬롯: 다이어리 날짜 스티커 */
   .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
   .slots a, .slots button { display: block; width: 100%; text-align: center;
