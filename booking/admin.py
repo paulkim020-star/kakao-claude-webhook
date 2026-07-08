@@ -46,8 +46,11 @@ def _admin_auth(credentials: HTTPBasicCredentials = Depends(_security)) -> str:
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(_admin_auth)])
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+templates.env.globals["kakao_channel_url"] = os.environ.get("KAKAO_CHANNEL_URL", "")
+templates.env.globals["instagram_url"] = os.environ.get("INSTAGRAM_URL", "")
 
 STATUS_LABEL = {
+    "pending": "승인 대기",
     "confirmed": "확정",
     "done": "방문 완료",
     "noshow": "노쇼",
@@ -100,12 +103,23 @@ def change_status(
     try:
         conn.execute("BEGIN IMMEDIATE")
         try:
+            before = conn.execute(
+                "SELECT status, start_at FROM reservation WHERE id = ?",
+                (reservation_id,),
+            ).fetchone()
             conn.execute(
                 "UPDATE reservation SET status = ? WHERE id = ?",
                 (new_status, reservation_id),
             )
             if new_status in ("canceled", "noshow", "done"):
                 _cancel_pending_notifications(conn, reservation_id)
+            # 동시간대 요청 승인: 이 시점부터 확정 알림 + 리마인드 발송
+            if (before is not None and before["status"] == "pending"
+                    and new_status == "confirmed"):
+                engine._schedule_notifications(
+                    conn, reservation_id,
+                    engine.parse_dt(before["start_at"]), engine.now_kst(),
+                )
             conn.execute("COMMIT")
         except BaseException:
             conn.execute("ROLLBACK")
@@ -164,6 +178,76 @@ def manual_new(
                            service=service, date=date, slots=slots, error=str(exc))
         return RedirectResponse(f"/admin?date={reservation['start_at'][:10]}",
                                 status_code=303)
+    finally:
+        conn.close()
+
+
+PHOTO_KIND_LABEL = {
+    "reference": "희망 스타일", "front": "정면", "side": "측면", "back": "뒷면",
+}
+
+
+@router.get("/customers")
+def customers_view(request: Request, q: str = ""):
+    """고객 아카이브: 전화번호 기준으로 방문 이력을 묶어 보여줌."""
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT customer_name, phone, status, start_at FROM reservation"
+            " ORDER BY start_at DESC"
+        ).fetchall()
+        groups: dict[str, dict] = {}
+        for r in rows:
+            g = groups.setdefault(r["phone"], {
+                "name": r["customer_name"], "phone": r["phone"],
+                "total": 0, "done": 0, "noshow": 0, "last": r["start_at"],
+            })
+            g["total"] += 1
+            if r["status"] == "done":
+                g["done"] += 1
+            elif r["status"] == "noshow":
+                g["noshow"] += 1
+        customers = list(groups.values())
+        if q.strip():
+            needle = q.strip()
+            digits = "".join(ch for ch in needle if ch.isdigit())
+            customers = [
+                c for c in customers
+                if needle in c["name"] or (digits and digits in c["phone"])
+            ]
+        return _render(request, conn, "admin_customers.html",
+                       customers=customers, q=q)
+    finally:
+        conn.close()
+
+
+@router.get("/customers/{phone}")
+def customer_history(request: Request, phone: str):
+    """고객 1명의 시술 아카이브: 방문 이력 + 희망 스타일/시술 결과 사진."""
+    conn = get_conn()
+    try:
+        reservations = conn.execute(
+            "SELECT r.*, s.name AS service_name FROM reservation r"
+            " JOIN service s ON s.id = r.service_id"
+            " WHERE r.phone = ? ORDER BY r.start_at DESC",
+            (phone,),
+        ).fetchall()
+        if not reservations:
+            return RedirectResponse("/admin/customers", status_code=303)
+        photos_by_res: dict[int, list] = {}
+        for p in conn.execute(
+            "SELECT p.* FROM photo p JOIN reservation r ON r.id = p.reservation_id"
+            " WHERE r.phone = ? ORDER BY p.id",
+            (phone,),
+        ).fetchall():
+            photos_by_res.setdefault(p["reservation_id"], []).append(p)
+        done = sum(1 for r in reservations if r["status"] == "done")
+        noshow = sum(1 for r in reservations if r["status"] == "noshow")
+        return _render(request, conn, "admin_history.html",
+                       reservations=reservations, photos_by_res=photos_by_res,
+                       customer_name=reservations[0]["customer_name"], phone=phone,
+                       done=done, noshow=noshow,
+                       photo_kind_label=PHOTO_KIND_LABEL)
     finally:
         conn.close()
 

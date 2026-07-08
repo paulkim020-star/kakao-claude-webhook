@@ -3,6 +3,7 @@
   <div class="card">
     <h2>관리자 · 예약 현황</h2>
     <p class="muted"><a href="/admin/new?date={{ date }}">+ 수기 예약</a> ·
+       <a href="/admin/customers">고객 아카이브</a> ·
        <a href="/admin/services">메뉴 관리</a> ·
        <a href="/admin/settings">영업시간/휴무</a></p>
     <form method="get" action="/admin" style="margin-top:8px; display:flex; gap:8px; align-items:center">
@@ -16,18 +17,28 @@
     <div class="card"><p class="muted">이 날짜에 예약이 없습니다.</p></div>
   {% endif %}
   {% for r in reservations %}
-  <div class="card" {% if r['status'] == 'canceled' %}style="opacity:.55"{% endif %}>
+  <div class="card" {% if r['status'] == 'canceled' %}style="opacity:.55"
+       {% elif r['status'] == 'pending' %}style="border:1.5px solid #c26a52"{% endif %}>
     <div class="row">
       <span><b>{{ r['start_at'][11:] }}~{{ r['end_at'][11:] }}</b> {{ r['service_name'] }}</span>
       <span>{{ status_label[r['status']] }}{% if r['canceled_late'] %} ⚠️마감후취소{% endif %}</span>
     </div>
     <div class="row">
-      <span>{{ r['customer_name'] }} ({{ r['phone'] }})</span>
+      <span><a href="/admin/customers/{{ r['phone'] }}"
+               style="color:inherit">{{ r['customer_name'] }}</a> ({{ r['phone'] }})</span>
       <span class="muted">{{ r['source'] }} · {{ r['code'] }} ·
         <a href="/admin/photos/{{ r['id'] }}">📷 사진</a></span>
     </div>
     {% if r['request_note'] %}<p class="muted">요청: {{ r['request_note'] }}</p>{% endif %}
-    {% if r['status'] == 'confirmed' %}
+    {% if r['status'] == 'pending' %}
+    <form method="post" action="/admin/status" style="display:flex; gap:8px; margin-top:10px">
+      <input type="hidden" name="reservation_id" value="{{ r['id'] }}">
+      <input type="hidden" name="date" value="{{ date }}">
+      <button class="btn" name="new_status" value="confirmed" style="padding:9px 0">✔ 승인 (확정)</button>
+      <button class="btn secondary" name="new_status" value="canceled" style="padding:9px 0">거절</button>
+    </form>
+    <p class="muted" style="margin-top:6px">⏳ 동시간대 요청입니다. 승인하면 고객에게 확정 알림이 나갑니다.</p>
+    {% elif r['status'] == 'confirmed' %}
     <form method="post" action="/admin/status" style="display:flex; gap:8px; margin-top:10px">
       <input type="hidden" name="reservation_id" value="{{ r['id'] }}">
       <input type="hidden" name="date" value="{{ date }}">

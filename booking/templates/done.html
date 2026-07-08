@@ -1,9 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
   <div class="card">
-    <h2 style="text-align:center">예약이 확정되었습니다 🎉</h2>
-    <div class="code">{{ r['code'] }}</div>
-    <p class="muted" style="text-align:center">예약번호를 꼭 기억해 주세요.<br>조회·변경·취소에 사용됩니다.</p>
+    {% if r['status'] == 'pending' %}
+      <h2 style="text-align:center">예약 요청이 접수되었습니다 ⏳</h2>
+      <div class="code">{{ r['code'] }}</div>
+      <p class="muted" style="text-align:center">이미 예약이 있는 시간이라
+        <b>원장님 승인 후 확정</b>됩니다.<br>승인되면 알림으로 안내드려요.<br>
+        예약번호는 조회·취소에 사용됩니다.</p>
+    {% else %}
+      <h2 style="text-align:center">예약이 확정되었습니다 🎉</h2>
+      <div class="code">{{ r['code'] }}</div>
+      <p class="muted" style="text-align:center">예약번호를 꼭 기억해 주세요.<br>조회·변경·취소에 사용됩니다.</p>
+    {% endif %}
   </div>
   <div class="card">
     <div class="row"><span class="k">시술</span><span>{{ r['service_name'] }}</span></div>
@@ -13,4 +21,7 @@
       <span class="price">{{ "{:,}".format(r['base_price']) }}원{% if r['extra_charge_note'] %}~{% endif %}</span></div>
   </div>
   <a class="btn secondary" href="/booking/lookup">내 예약 관리</a>
+  {% if instagram_url %}
+  <a class="btn secondary" href="{{ instagram_url }}" target="_blank" rel="noopener">📸 인스타그램에서 스타일 구경하기</a>
+  {% endif %}
 {% endblock %}

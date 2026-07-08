@@ -70,10 +70,11 @@ def test_create_reservation_blocks_overlap(conn):
     assert "10:30" not in slots and "11:00" not in slots and "11:30" not in slots
     assert "10:00" in slots and "12:00" in slots
 
-    with pytest.raises(engine.SlotUnavailableError):
-        engine.create_reservation(
-            conn, service["id"], "박손님", "010-9999-8888", "", f"{TUESDAY}T11:30", now=NOW
-        )
+    # 겹치는 시간의 두 번째 손님은 거절이 아니라 '승인 대기'로 접수됨
+    second = engine.create_reservation(
+        conn, service["id"], "박손님", "010-9999-8888", "", f"{TUESDAY}T11:30", now=NOW
+    )
+    assert second["status"] == "pending"
 
 
 def test_create_reservation_rejects_closed_day(conn):
@@ -94,6 +95,42 @@ def test_create_reservation_validates_input(conn):
         engine.create_reservation(
             conn, service["id"], "김손님", "12", "", f"{TUESDAY}T11:00", now=NOW
         )
+
+
+# ---------- 동시간대 예약 (원장 승인제, 최대 3명) ----------
+
+def test_overlap_waitlist_and_capacity(conn):
+    service = _cut_service(conn)  # 40분
+    first = engine.create_reservation(
+        conn, service["id"], "첫손님", "01011110001", "", f"{TUESDAY}T11:00", now=NOW
+    )
+    assert first["status"] == "confirmed"
+    # 빈 슬롯에서는 빠지고, 승인 요청 슬롯으로 넘어감
+    assert "11:00" not in engine.available_slots(conn, 40, TUESDAY, now=NOW)
+    assert "11:00" in engine.waitlist_slots(conn, 40, TUESDAY, now=NOW)
+
+    second = engine.create_reservation(
+        conn, service["id"], "둘째손님", "01011110002", "", f"{TUESDAY}T11:00", now=NOW
+    )
+    third = engine.create_reservation(
+        conn, service["id"], "셋째손님", "01011110003", "", f"{TUESDAY}T11:00", now=NOW
+    )
+    assert second["status"] == "pending" and third["status"] == "pending"
+    # 승인 대기 건은 원장 승인 전까지 알림이 잡히지 않음
+    assert conn.execute(
+        "SELECT COUNT(*) FROM notification WHERE reservation_id = ?", (second["id"],)
+    ).fetchone()[0] == 0
+
+    # 동시간 3명이 차면 요청 불가
+    with pytest.raises(engine.SlotUnavailableError):
+        engine.create_reservation(
+            conn, service["id"], "넷째손님", "01011110004", "", f"{TUESDAY}T11:00", now=NOW
+        )
+    assert "11:00" not in engine.waitlist_slots(conn, 40, TUESDAY, now=NOW)
+
+    # 승인 대기 건도 고객이 취소 가능
+    engine.cancel_reservation(conn, third["code"], "01011110003", now=NOW)
+    assert "11:00" in engine.waitlist_slots(conn, 40, TUESDAY, now=NOW)
 
 
 # ---------- 취소/변경 ----------
@@ -188,9 +225,9 @@ def test_web_reserve_flow_and_conflict(client):
     res = client.post("/booking/reserve", data=form)
     assert res.status_code == 200 and "예약이 확정되었습니다" in res.text
 
-    # 같은 시간 중복 예약 시도 → 에러 안내
+    # 같은 시간 중복 예약 시도 → 승인 대기로 접수
     res2 = client.post("/booking/reserve", data={**form, "phone": "010-3333-4444"})
-    assert "예약할 수 없습니다" in res2.text
+    assert "예약 요청이 접수되었습니다" in res2.text
 
 
 def test_web_lookup_and_cancel(client):
@@ -211,6 +248,47 @@ def test_web_lookup_and_cancel(client):
     assert "예약이 취소되었습니다" in res.text
 
 
+def test_web_overbook_request_and_approval(client):
+    date = _future_open_date()
+    auth = ("admin", "changeme")
+    client.post("/booking/reserve", data={
+        "service_id": 1, "start": f"{date}T13:00",
+        "customer_name": "먼저손님", "phone": "010-2020-0001", "request_note": "",
+    })
+    # 같은 시간 두 번째 손님 → 승인 대기로 접수
+    res = client.post("/booking/reserve", data={
+        "service_id": 1, "start": f"{date}T13:00",
+        "customer_name": "요청손님", "phone": "010-2020-0002", "request_note": "",
+    })
+    assert "예약 요청이 접수되었습니다" in res.text
+
+    # 시간 선택 화면에 승인제 슬롯 안내 노출
+    res = client.get(f"/booking/time?service_id=1&date={date}")
+    assert "원장 승인 후 확정" in res.text
+
+    conn = db.get_conn()
+    rid = conn.execute(
+        "SELECT id FROM reservation WHERE phone = '01020200002'"
+    ).fetchone()["id"]
+    conn.close()
+
+    # 관리자 화면에 승인 버튼 노출 → 승인하면 확정 + 알림 예약
+    res = client.get(f"/admin?date={date}", auth=auth)
+    assert "승인 대기" in res.text and "승인 (확정)" in res.text
+    client.post("/admin/status", auth=auth, data={
+        "reservation_id": rid, "new_status": "confirmed", "date": date,
+    }, follow_redirects=False)
+    conn = db.get_conn()
+    status = conn.execute(
+        "SELECT status FROM reservation WHERE id = ?", (rid,)
+    ).fetchone()["status"]
+    notif = conn.execute(
+        "SELECT COUNT(*) FROM notification WHERE reservation_id = ?", (rid,)
+    ).fetchone()[0]
+    conn.close()
+    assert status == "confirmed" and notif >= 1
+
+
 def test_admin_requires_auth(client):
     assert client.get("/admin").status_code == 401
     assert client.get("/admin", auth=("admin", "changeme")).status_code == 200
@@ -221,6 +299,25 @@ def test_webhook_booking_intent(client):
     res = client.post("/kakao/webhook", json=payload)
     text = res.json()["template"]["outputs"][0]["simpleText"]["text"]
     assert "/booking" in text
+
+
+def test_webhook_consult_intent_and_chat_button(client, monkeypatch):
+    import main
+    from booking import web
+
+    channel = "http://pf.kakao.com/_test/chat"
+    monkeypatch.setattr(main, "KAKAO_CHANNEL_URL", channel)
+    monkeypatch.setitem(web.templates.env.globals, "kakao_channel_url", channel)
+
+    # 챗봇: 상담 발화 → 원장 직접 응대 안내
+    payload = {"userRequest": {"utterance": "원장님께 문의드리고 싶어요", "user": {"id": "u2"}}}
+    res = client.post("/kakao/webhook", json=payload)
+    text = res.json()["template"]["outputs"][0]["simpleText"]["text"]
+    assert channel in text and "원장님" in text
+
+    # 웹: 모든 페이지 하단에 카카오톡 문의 버튼 노출
+    res = client.get("/booking")
+    assert channel in res.text and "문의하기" in res.text
 
 
 # ---------- 소셜 로그인 ----------
@@ -363,6 +460,41 @@ def test_reserve_rejects_bad_photo_type(client, photo_dir):
     ).fetchone()[0]
     conn.close()
     assert count == 0  # 사진이 거절되면 예약도 생성되지 않음
+
+
+def test_admin_customer_archive(client, photo_dir):
+    date = _future_open_date()
+    auth = ("admin", "changeme")
+    # 같은 고객(전화번호)으로 예약 2건
+    for t in ("11:00", "15:00"):
+        client.post("/booking/reserve", data={
+            "service_id": 1, "start": f"{date}T{t}",
+            "customer_name": "단골손님", "phone": "010-7070-6060", "request_note": "",
+        })
+    conn = db.get_conn()
+    rid = conn.execute(
+        "SELECT id FROM reservation WHERE phone = '01070706060' LIMIT 1"
+    ).fetchone()["id"]
+    conn.close()
+    # 한 건은 방문 완료 처리 + 결과 사진 기록
+    client.post("/admin/status", auth=auth, data={
+        "reservation_id": rid, "new_status": "done", "date": date,
+    }, follow_redirects=False)
+    client.post(f"/admin/photos/{rid}", auth=auth,
+                files={"front": ("f.png", PNG, "image/png")}, follow_redirects=False)
+
+    # 고객 목록: 이름/방문 횟수 노출 (인증 필수)
+    assert client.get("/admin/customers").status_code == 401
+    res = client.get("/admin/customers", auth=auth)
+    assert "단골손님" in res.text and "방문 1회" in res.text
+    # 검색
+    res = client.get("/admin/customers?q=단골", auth=auth)
+    assert "단골손님" in res.text
+
+    # 히스토리: 예약 2건 + 결과 사진 + 사진 라벨 노출
+    res = client.get("/admin/customers/01070706060", auth=auth)
+    assert res.text.count(f"{date}") >= 2
+    assert "정면" in res.text and "/admin/photos/file/" in res.text
 
 
 def test_admin_result_photos_replace_per_angle(client, photo_dir):

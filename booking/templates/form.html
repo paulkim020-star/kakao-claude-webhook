@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+  <div class="duo">
   <div class="card">
     <h2>예약 내용 확인</h2>
     <div class="row"><span class="k">시술</span><span>{{ service['name'] }} ({{ service['duration_min'] }}분)</span></div>
@@ -35,5 +36,6 @@
         <button class="btn" type="submit">예약 확정하기</button>
       </div>
     </form>
+  </div>
   </div>
 {% endblock %}

@@ -13,6 +13,7 @@
       <div class="row">
         <span><b>{{ r['start_at'].replace('T', ' ') }}</b></span>
         <span>{% if r['status'] == 'confirmed' %}확정
+          {% elif r['status'] == 'pending' %}⏳ 승인 대기
           {% elif r['status'] == 'canceled' %}취소됨
           {% elif r['status'] == 'done' %}방문 완료
           {% elif r['status'] == 'noshow' %}노쇼

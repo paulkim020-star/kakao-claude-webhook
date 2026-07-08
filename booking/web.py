@@ -1,5 +1,7 @@
 """고객용 예약 웹 (/booking). 모바일 웹 기준의 서버 렌더링 페이지."""
 
+import os
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
@@ -12,6 +14,10 @@ from booking.db import get_conn, get_config
 
 router = APIRouter(prefix="/booking")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+# 카카오톡 채널 1:1 채팅 URL - 설정 시 모든 페이지에 문의 버튼 노출
+templates.env.globals["kakao_channel_url"] = os.environ.get("KAKAO_CHANNEL_URL", "")
+# 매장 인스타그램 URL - 설정 시 웹에 SNS 링크 노출 (마케팅 접점)
+templates.env.globals["instagram_url"] = os.environ.get("INSTAGRAM_URL", "")
 
 
 def _render(request: Request, conn, name: str, **context):
@@ -26,6 +32,35 @@ def _get_service(conn, service_id: int):
     return conn.execute(
         "SELECT * FROM service WHERE id = ? AND active = 1", (service_id,)
     ).fetchone()
+
+
+def _date_label(date_str: str) -> str:
+    """다이어리 느낌의 날짜 표기: '7월 8일 (화)'."""
+    d = datetime.strptime(date_str, "%Y-%m-%d")
+    return f"{d.month}월 {d.day}일 ({'월화수목금토일'[d.weekday()]})"
+
+
+def _day_chips(conn, selected: str, count: int = 14) -> list[dict]:
+    """가로 스크롤 날짜 선택 칩: 오늘부터 2주, 휴무일 표시."""
+    config = get_config(conn)
+    today = engine.now_kst()
+    chips = []
+    for i in range(count):
+        d = today + timedelta(days=i)
+        date_str = d.strftime("%Y-%m-%d")
+        chips.append({
+            "date": date_str,
+            "dow": "오늘" if i == 0 else "월화수목금토일"[d.weekday()],
+            "num": d.day,
+            "closed": engine.is_closed_day(conn, config, date_str),
+            "on": date_str == selected,
+        })
+    return chips
+
+
+def _split_slots(slots: list[str]) -> tuple[list[str], list[str]]:
+    """오전/오후 그룹으로 분리."""
+    return [t for t in slots if t < "12:00"], [t for t in slots if t >= "12:00"]
 
 
 def _my_context(conn, reservation) -> dict:
@@ -60,8 +95,13 @@ def choose_time(request: Request, service_id: int, date: str = ""):
         today = engine.now_kst().strftime("%Y-%m-%d")
         date = date or today
         slots = engine.available_slots(conn, service["duration_min"], date)
+        slots_am, slots_pm = _split_slots(slots)
         return _render(request, conn, "time.html", service=service,
-                       date=date, today=today, slots=slots, change_mode=False)
+                       date=date, today=today, slots=slots, change_mode=False,
+                       slots_am=slots_am, slots_pm=slots_pm,
+                       wait_slots=engine.waitlist_slots(conn, service["duration_min"], date),
+                       day_chips=_day_chips(conn, date),
+                       date_label=_date_label(date))
     finally:
         conn.close()
 
@@ -251,10 +291,13 @@ def change_form(request: Request, code: str, phone: str, date: str = ""):
         service = conn.execute(
             "SELECT * FROM service WHERE id = ?", (reservation["service_id"],)
         ).fetchone()
+        slots_am, slots_pm = _split_slots(slots)
         return _render(request, conn, "time.html", service=service,
                        date=date, today=today, slots=slots,
+                       slots_am=slots_am, slots_pm=slots_pm, wait_slots=[],
+                       day_chips=_day_chips(conn, date),
                        change_mode=True, code=reservation["code"],
-                       phone=reservation["phone"])
+                       phone=reservation["phone"], date_label=_date_label(date))
     finally:
         conn.close()
 

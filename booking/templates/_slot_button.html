@@ -1,0 +1,11 @@
+{# 시간 슬롯 버튼 1개 (time.html에서 include, 변수 t 사용) #}
+{% if change_mode %}
+<form method="post" action="/booking/change">
+  <input type="hidden" name="code" value="{{ code }}">
+  <input type="hidden" name="phone" value="{{ phone }}">
+  <input type="hidden" name="new_start" value="{{ date }}T{{ t }}">
+  <button type="submit">{{ t }}</button>
+</form>
+{% else %}
+<a href="/booking/form?service_id={{ service['id'] }}&start={{ date }}T{{ t }}">{{ t }}</a>
+{% endif %}
