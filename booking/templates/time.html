@@ -37,7 +37,7 @@
     </details>
   </div>
   <div class="card">
-    {% if slots %}
+    {% if slots or wait_slots %}
       <h2><span class="hl">{{ date_label }}</span></h2>
       {% if slots_am %}
         <p class="slot-group">🌅 오전</p>
@@ -50,6 +50,16 @@
         <div class="slots">
           {% for t in slots_pm %}{% include "_slot_button.html" %}{% endfor %}
         </div>
+      {% endif %}
+      {% if not change_mode and wait_slots %}
+        <p class="slot-group">⏳ 예약 요청 가능 (원장 승인 후 확정)</p>
+        <div class="slots">
+          {% for t in wait_slots %}
+            <a class="wait" href="/booking/form?service_id={{ service['id'] }}&start={{ date }}T{{ t }}">{{ t }}</a>
+          {% endfor %}
+        </div>
+        <p class="muted" style="margin-top:8px">이미 예약이 있는 시간이에요. 요청을 남기시면
+          원장님이 가능 여부를 확인한 뒤 확정해 드려요. (동시간 최대 3명)</p>
       {% endif %}
     {% else %}
       <h2>{{ date_label }}</h2>

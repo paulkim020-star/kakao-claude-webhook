@@ -16,6 +16,8 @@ router = APIRouter(prefix="/booking")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 # 카카오톡 채널 1:1 채팅 URL - 설정 시 모든 페이지에 문의 버튼 노출
 templates.env.globals["kakao_channel_url"] = os.environ.get("KAKAO_CHANNEL_URL", "")
+# 매장 인스타그램 URL - 설정 시 웹에 SNS 링크 노출 (마케팅 접점)
+templates.env.globals["instagram_url"] = os.environ.get("INSTAGRAM_URL", "")
 
 
 def _render(request: Request, conn, name: str, **context):
@@ -97,6 +99,7 @@ def choose_time(request: Request, service_id: int, date: str = ""):
         return _render(request, conn, "time.html", service=service,
                        date=date, today=today, slots=slots, change_mode=False,
                        slots_am=slots_am, slots_pm=slots_pm,
+                       wait_slots=engine.waitlist_slots(conn, service["duration_min"], date),
                        day_chips=_day_chips(conn, date),
                        date_label=_date_label(date))
     finally:
@@ -291,7 +294,7 @@ def change_form(request: Request, code: str, phone: str, date: str = ""):
         slots_am, slots_pm = _split_slots(slots)
         return _render(request, conn, "time.html", service=service,
                        date=date, today=today, slots=slots,
-                       slots_am=slots_am, slots_pm=slots_pm,
+                       slots_am=slots_am, slots_pm=slots_pm, wait_slots=[],
                        day_chips=_day_chips(conn, date),
                        change_mode=True, code=reservation["code"],
                        phone=reservation["phone"], date_label=_date_label(date))

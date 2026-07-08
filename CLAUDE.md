@@ -31,7 +31,10 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 Booking env vars: `BOOKING_DB` (SQLite path, default `booking.db`),
 `ADMIN_PASSWORD` (admin Basic auth), `BOOKING_BASE_URL` (챗봇이 안내하는
 예약 페이지 공개 URL), `KAKAO_CHANNEL_URL` (선택 - 카카오톡 채널 1:1 채팅 URL,
-설정 시 웹에 문의 버튼 노출 + 챗봇이 상담 발화를 원장 직접 응대로 안내).
+설정 시 웹에 문의 버튼 노출 + 챗봇이 상담 발화를 원장 직접 응대로 안내),
+`INSTAGRAM_URL` (선택 - 매장 인스타그램, 설정 시 웹에 SNS 링크 노출).
+동시간대 예약은 첫 손님 자동 확정, 2~3번째는 pending(원장 승인제) -
+`engine.MAX_OVERLAP` 참고.
 소셜 로그인(선택, `booking/auth.py`):
 `KAKAO_CLIENT_ID`/`KAKAO_CLIENT_SECRET`, `NAVER_CLIENT_ID`/`NAVER_CLIENT_SECRET`,
 `SESSION_SECRET` - 키가 없는 제공자는 로그인 버튼이 숨겨지고 비회원 예약만 동작.

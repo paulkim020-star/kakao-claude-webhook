@@ -47,8 +47,10 @@ def _admin_auth(credentials: HTTPBasicCredentials = Depends(_security)) -> str:
 router = APIRouter(prefix="/admin", dependencies=[Depends(_admin_auth)])
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["kakao_channel_url"] = os.environ.get("KAKAO_CHANNEL_URL", "")
+templates.env.globals["instagram_url"] = os.environ.get("INSTAGRAM_URL", "")
 
 STATUS_LABEL = {
+    "pending": "승인 대기",
     "confirmed": "확정",
     "done": "방문 완료",
     "noshow": "노쇼",
@@ -101,12 +103,23 @@ def change_status(
     try:
         conn.execute("BEGIN IMMEDIATE")
         try:
+            before = conn.execute(
+                "SELECT status, start_at FROM reservation WHERE id = ?",
+                (reservation_id,),
+            ).fetchone()
             conn.execute(
                 "UPDATE reservation SET status = ? WHERE id = ?",
                 (new_status, reservation_id),
             )
             if new_status in ("canceled", "noshow", "done"):
                 _cancel_pending_notifications(conn, reservation_id)
+            # 동시간대 요청 승인: 이 시점부터 확정 알림 + 리마인드 발송
+            if (before is not None and before["status"] == "pending"
+                    and new_status == "confirmed"):
+                engine._schedule_notifications(
+                    conn, reservation_id,
+                    engine.parse_dt(before["start_at"]), engine.now_kst(),
+                )
             conn.execute("COMMIT")
         except BaseException:
             conn.execute("ROLLBACK")

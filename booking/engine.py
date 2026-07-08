@@ -23,6 +23,9 @@ SAME_DAY_HOUR = 9
 # 예약번호에서 헷갈리는 문자(0/O, 1/I/L) 제외
 _CODE_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
 
+# 동시간대 최대 인원: 첫 손님은 자동 확정, 2~3번째는 원장 승인(pending) 필요
+MAX_OVERLAP = 3
+
 
 class SlotUnavailableError(Exception):
     """이미 예약됐거나 예약 불가능한 시간."""
@@ -61,18 +64,18 @@ def is_closed_day(conn: sqlite3.Connection, config: dict[str, str], date_str: st
     return row is not None
 
 
-def available_slots(
+def _slot_scan(
     conn: sqlite3.Connection,
     duration_min: int,
     date_str: str,
-    now: datetime | None = None,
+    now: datetime,
     exclude_reservation_id: int | None = None,
-) -> list[str]:
-    """해당 날짜에 예약 가능한 시작 시각('HH:MM') 목록.
+) -> list[tuple[str, int]]:
+    """영업시간 내 미래 시작 시각별 동시간대 예약 수. [('HH:MM', 겹침수), ...]
 
+    겹침수에는 확정(confirmed)과 승인 대기(pending)가 모두 포함됨.
     exclude_reservation_id: 예약 시간 변경 시 자기 자신과의 충돌을 무시하기 위함.
     """
-    now = now or now_kst()
     config = get_config(conn)
     if is_closed_day(conn, config, date_str):
         return []
@@ -82,10 +85,9 @@ def available_slots(
     step = timedelta(minutes=int(config["slot_minutes"]))
     duration = timedelta(minutes=duration_min)
 
-    # 그날의 유효한 예약(confirmed)만 충돌 검사 대상
     query = (
         "SELECT id, start_at, end_at FROM reservation"
-        " WHERE status = 'confirmed' AND start_at < ? AND end_at > ?"
+        " WHERE status IN ('confirmed', 'pending') AND start_at < ? AND end_at > ?"
     )
     params: list = [close_dt.strftime(TIME_FMT), open_dt.strftime(TIME_FMT)]
     if exclude_reservation_id is not None:
@@ -96,16 +98,42 @@ def available_slots(
         for r in conn.execute(query, params).fetchall()
     ]
 
-    slots = []
+    scan = []
     cursor = open_dt
     while cursor + duration <= close_dt:
-        if cursor > now and not any(
-            cursor < e_end and cursor + duration > e_start
-            for e_start, e_end in existing
-        ):
-            slots.append(cursor.strftime("%H:%M"))
+        if cursor > now:
+            count = sum(
+                1 for e_start, e_end in existing
+                if cursor < e_end and cursor + duration > e_start
+            )
+            scan.append((cursor.strftime("%H:%M"), count))
         cursor += step
-    return slots
+    return scan
+
+
+def available_slots(
+    conn: sqlite3.Connection,
+    duration_min: int,
+    date_str: str,
+    now: datetime | None = None,
+    exclude_reservation_id: int | None = None,
+) -> list[str]:
+    """빈 시간(즉시 확정 가능)의 시작 시각 목록."""
+    scan = _slot_scan(conn, duration_min, date_str, now or now_kst(),
+                      exclude_reservation_id)
+    return [t for t, count in scan if count == 0]
+
+
+def waitlist_slots(
+    conn: sqlite3.Connection,
+    duration_min: int,
+    date_str: str,
+    now: datetime | None = None,
+) -> list[str]:
+    """이미 예약이 있지만 동시간대 정원(MAX_OVERLAP) 미만이라
+    원장 승인을 전제로 요청 가능한 시작 시각 목록."""
+    scan = _slot_scan(conn, duration_min, date_str, now or now_kst())
+    return [t for t, count in scan if 1 <= count < MAX_OVERLAP]
 
 
 def _schedule_notifications(
@@ -160,12 +188,15 @@ def create_reservation(
 
     conn.execute("BEGIN IMMEDIATE")
     try:
-        # 트랜잭션(쓰기 잠금) 안에서 가용 여부를 재확인 → 동시 요청이 와도 한 건만 성공
-        slots = available_slots(
-            conn, service["duration_min"], start_dt.strftime("%Y-%m-%d"), now=now
-        )
-        if start_dt.strftime("%H:%M") not in slots:
+        # 트랜잭션(쓰기 잠금) 안에서 가용 여부를 재확인 → 동시 요청이 와도 정원 초과 없음
+        scan = dict(_slot_scan(
+            conn, service["duration_min"], start_dt.strftime("%Y-%m-%d"), now
+        ))
+        overlap = scan.get(start_dt.strftime("%H:%M"))
+        if overlap is None or overlap >= MAX_OVERLAP:
             raise SlotUnavailableError("선택한 시간은 예약할 수 없습니다. 다른 시간을 선택해 주세요.")
+        # 빈 시간이면 즉시 확정, 이미 예약이 있으면 원장 승인 대기
+        status = "confirmed" if overlap == 0 else "pending"
 
         code = generate_code()
         while conn.execute(
@@ -175,8 +206,8 @@ def create_reservation(
 
         cur = conn.execute(
             "INSERT INTO reservation (code, service_id, customer_name, phone,"
-            " request_note, start_at, end_at, source, customer_id, created_at)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " request_note, start_at, end_at, status, source, customer_id, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 code,
                 service_id,
@@ -185,12 +216,15 @@ def create_reservation(
                 request_note.strip(),
                 start_dt.strftime(TIME_FMT),
                 end_dt.strftime(TIME_FMT),
+                status,
                 source,
                 customer_id,
                 now.strftime(TIME_FMT),
             ),
         )
-        _schedule_notifications(conn, cur.lastrowid, start_dt, now)
+        # 승인 대기 건은 원장이 승인하는 시점에 리마인드가 잡힘 (admin.py)
+        if status == "confirmed":
+            _schedule_notifications(conn, cur.lastrowid, start_dt, now)
         conn.execute("COMMIT")
     except BaseException:
         conn.execute("ROLLBACK")
@@ -220,7 +254,7 @@ def cancel_reservation(
     """고객 셀프 취소. 반환값의 bool은 '취소 마감 이후 취소' 여부."""
     now = now or now_kst()
     reservation = find_reservation(conn, code, phone)
-    if reservation is None or reservation["status"] != "confirmed":
+    if reservation is None or reservation["status"] not in ("confirmed", "pending"):
         raise ValueError("취소할 수 있는 예약을 찾지 못했습니다.")
 
     deadline_hours = int(get_config(conn)["cancel_deadline_hours"])

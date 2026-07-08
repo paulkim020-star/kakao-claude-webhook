@@ -70,10 +70,11 @@ def test_create_reservation_blocks_overlap(conn):
     assert "10:30" not in slots and "11:00" not in slots and "11:30" not in slots
     assert "10:00" in slots and "12:00" in slots
 
-    with pytest.raises(engine.SlotUnavailableError):
-        engine.create_reservation(
-            conn, service["id"], "박손님", "010-9999-8888", "", f"{TUESDAY}T11:30", now=NOW
-        )
+    # 겹치는 시간의 두 번째 손님은 거절이 아니라 '승인 대기'로 접수됨
+    second = engine.create_reservation(
+        conn, service["id"], "박손님", "010-9999-8888", "", f"{TUESDAY}T11:30", now=NOW
+    )
+    assert second["status"] == "pending"
 
 
 def test_create_reservation_rejects_closed_day(conn):
@@ -94,6 +95,42 @@ def test_create_reservation_validates_input(conn):
         engine.create_reservation(
             conn, service["id"], "김손님", "12", "", f"{TUESDAY}T11:00", now=NOW
         )
+
+
+# ---------- 동시간대 예약 (원장 승인제, 최대 3명) ----------
+
+def test_overlap_waitlist_and_capacity(conn):
+    service = _cut_service(conn)  # 40분
+    first = engine.create_reservation(
+        conn, service["id"], "첫손님", "01011110001", "", f"{TUESDAY}T11:00", now=NOW
+    )
+    assert first["status"] == "confirmed"
+    # 빈 슬롯에서는 빠지고, 승인 요청 슬롯으로 넘어감
+    assert "11:00" not in engine.available_slots(conn, 40, TUESDAY, now=NOW)
+    assert "11:00" in engine.waitlist_slots(conn, 40, TUESDAY, now=NOW)
+
+    second = engine.create_reservation(
+        conn, service["id"], "둘째손님", "01011110002", "", f"{TUESDAY}T11:00", now=NOW
+    )
+    third = engine.create_reservation(
+        conn, service["id"], "셋째손님", "01011110003", "", f"{TUESDAY}T11:00", now=NOW
+    )
+    assert second["status"] == "pending" and third["status"] == "pending"
+    # 승인 대기 건은 원장 승인 전까지 알림이 잡히지 않음
+    assert conn.execute(
+        "SELECT COUNT(*) FROM notification WHERE reservation_id = ?", (second["id"],)
+    ).fetchone()[0] == 0
+
+    # 동시간 3명이 차면 요청 불가
+    with pytest.raises(engine.SlotUnavailableError):
+        engine.create_reservation(
+            conn, service["id"], "넷째손님", "01011110004", "", f"{TUESDAY}T11:00", now=NOW
+        )
+    assert "11:00" not in engine.waitlist_slots(conn, 40, TUESDAY, now=NOW)
+
+    # 승인 대기 건도 고객이 취소 가능
+    engine.cancel_reservation(conn, third["code"], "01011110003", now=NOW)
+    assert "11:00" in engine.waitlist_slots(conn, 40, TUESDAY, now=NOW)
 
 
 # ---------- 취소/변경 ----------
@@ -188,9 +225,9 @@ def test_web_reserve_flow_and_conflict(client):
     res = client.post("/booking/reserve", data=form)
     assert res.status_code == 200 and "예약이 확정되었습니다" in res.text
 
-    # 같은 시간 중복 예약 시도 → 에러 안내
+    # 같은 시간 중복 예약 시도 → 승인 대기로 접수
     res2 = client.post("/booking/reserve", data={**form, "phone": "010-3333-4444"})
-    assert "예약할 수 없습니다" in res2.text
+    assert "예약 요청이 접수되었습니다" in res2.text
 
 
 def test_web_lookup_and_cancel(client):
@@ -209,6 +246,47 @@ def test_web_lookup_and_cancel(client):
     assert "예약 정보" in res.text
     res = client.post("/booking/cancel", data={"code": code, "phone": "010-5555-6666"})
     assert "예약이 취소되었습니다" in res.text
+
+
+def test_web_overbook_request_and_approval(client):
+    date = _future_open_date()
+    auth = ("admin", "changeme")
+    client.post("/booking/reserve", data={
+        "service_id": 1, "start": f"{date}T13:00",
+        "customer_name": "먼저손님", "phone": "010-2020-0001", "request_note": "",
+    })
+    # 같은 시간 두 번째 손님 → 승인 대기로 접수
+    res = client.post("/booking/reserve", data={
+        "service_id": 1, "start": f"{date}T13:00",
+        "customer_name": "요청손님", "phone": "010-2020-0002", "request_note": "",
+    })
+    assert "예약 요청이 접수되었습니다" in res.text
+
+    # 시간 선택 화면에 승인제 슬롯 안내 노출
+    res = client.get(f"/booking/time?service_id=1&date={date}")
+    assert "원장 승인 후 확정" in res.text
+
+    conn = db.get_conn()
+    rid = conn.execute(
+        "SELECT id FROM reservation WHERE phone = '01020200002'"
+    ).fetchone()["id"]
+    conn.close()
+
+    # 관리자 화면에 승인 버튼 노출 → 승인하면 확정 + 알림 예약
+    res = client.get(f"/admin?date={date}", auth=auth)
+    assert "승인 대기" in res.text and "승인 (확정)" in res.text
+    client.post("/admin/status", auth=auth, data={
+        "reservation_id": rid, "new_status": "confirmed", "date": date,
+    }, follow_redirects=False)
+    conn = db.get_conn()
+    status = conn.execute(
+        "SELECT status FROM reservation WHERE id = ?", (rid,)
+    ).fetchone()["status"]
+    notif = conn.execute(
+        "SELECT COUNT(*) FROM notification WHERE reservation_id = ?", (rid,)
+    ).fetchone()[0]
+    conn.close()
+    assert status == "confirmed" and notif >= 1
 
 
 def test_admin_requires_auth(client):
