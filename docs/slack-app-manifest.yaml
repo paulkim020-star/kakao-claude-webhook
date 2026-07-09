@@ -1,0 +1,30 @@
+# Slack 앱 매니페스트 - GPT↔Claude 대화봇
+# ==========================================
+# 사용법: https://api.slack.com/apps → Create New App → "From a manifest"
+#   → 워크스페이스 선택 → 아래 내용 전체를 붙여넣기 → Create
+#   → 스코프/이벤트 구독이 자동 설정됩니다.
+#
+# 붙여넣기 전에 request_url 의 YOUR-DEPLOY-URL 을 실제 배포 주소로 바꾸세요.
+# (서버가 아직 없으면 일단 생성 후, 배포 뒤 Event Subscriptions 에서 URL만 수정해도 됩니다.
+#  URL 검증은 서버가 떠 있어야 통과합니다.)
+display_information:
+  name: GPT-Claude 대화봇
+  description: 멘션한 주제로 GPT와 Claude가 대화합니다
+  background_color: "#4A154B"
+features:
+  bot_user:
+    display_name: gpt-claude-bot
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - chat:write
+settings:
+  event_subscriptions:
+    request_url: https://YOUR-DEPLOY-URL/slack/events
+    bot_events:
+      - app_mention
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
