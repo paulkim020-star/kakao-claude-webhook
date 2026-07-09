@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+  <p class="muted" style="text-align:center">
+    주제를 알려주시면 작가 에이전트가 이야기를 쓰고, 화가 에이전트가 그림을 그려요.
+  </p>
+  <form method="post" action="/storybook/create">
+    <div class="field">
+      <label for="topic">동화 주제</label>
+      <input type="text" id="topic" name="topic" required
+             placeholder="예) 용감한 토끼와 달빛 숲">
+    </div>
+    <div class="field">
+      <label for="pages">페이지 수 (1~12)</label>
+      <input type="number" id="pages" name="pages" value="6" min="1" max="12">
+    </div>
+    <div class="field" style="text-align:center">
+      <button class="btn" type="submit">동화책 만들기</button>
+    </div>
+  </form>
+  {% if provider == "placeholder" %}
+  <p class="muted">
+    ※ 지금은 이미지 생성 키(GOOGLE_API_KEY / OPENAI_API_KEY)가 없어 그림은
+    플레이스홀더로 나와요. 키를 넣으면 진짜 그림이 그려집니다.
+  </p>
+  {% else %}
+  <p class="muted">※ 이미지 제공자: {{ provider }}</p>
+  {% endif %}
+{% endblock %}

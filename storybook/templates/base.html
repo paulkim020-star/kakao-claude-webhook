@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}동화책 공방{% endblock %}</title>
+  <style>
+    :root { --paper:#fbf6ec; --ink:#4a3f33; --accent:#c98a5e; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink);
+      font-family:"Noto Serif KR", Georgia, serif; }
+    .wrap { max-width:720px; margin:0 auto; padding:24px 18px 60px; }
+    h1 { font-size:26px; text-align:center; }
+    h1 a { text-decoration:none; color:inherit; }
+    a { color:var(--accent); }
+    .btn { display:inline-block; background:var(--accent); color:#fff;
+      border:none; border-radius:10px; padding:12px 20px; font-size:16px;
+      cursor:pointer; text-decoration:none; }
+    .field { margin:14px 0; }
+    label { display:block; margin-bottom:6px; font-weight:bold; }
+    input[type=text], input[type=number] { width:100%; padding:10px;
+      border:1px solid #d8cdb8; border-radius:8px; background:#fff; font-size:16px; }
+    .muted { color:#8a7f6c; font-size:14px; }
+    .page { padding:18px; background:#fff; border:1px solid #ece2cf;
+      border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); }
+    .page img { width:100%; border-radius:10px; display:block; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1><a href="/storybook">📖 동화책 공방</a></h1>
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

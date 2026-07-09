@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+  <h2 style="text-align:center">{{ title }}</h2>
+  {% if fallback %}
+  <p class="muted">※ Anthropic 키가 없어 임시 이야기예요. 키를 넣으면 진짜 동화가 채워집니다.</p>
+  {% endif %}
+  <div id="pages">
+  {% for page in pages %}
+    <div class="page"{% if not loop.first %} hidden{% endif %}>
+      <img src="{{ page['image'] }}" alt="{{ page['scene'] }}">
+      <p style="font-size:18px; line-height:1.8; margin:18px 6px">{{ page['text'] }}</p>
+    </div>
+  {% endfor %}
+  </div>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:18px">
+    <button class="btn" type="button" onclick="flip(-1)">← 이전</button>
+    <span class="muted" id="counter">1 / {{ pages|length }}</span>
+    <button class="btn" type="button" onclick="flip(1)">다음 →</button>
+  </div>
+  <p style="text-align:center; margin-top:26px">
+    <a href="/storybook">다른 동화 만들기</a>
+  </p>
+  <script>
+    var pages = document.querySelectorAll('#pages .page');
+    var i = 0;
+    function flip(d) {
+      var n = i + d;
+      if (n < 0 || n >= pages.length) return;
+      pages[i].hidden = true; pages[n].hidden = false; i = n;
+      document.getElementById('counter').textContent = (i + 1) + ' / ' + pages.length;
+    }
+  </script>
+{% endblock %}
