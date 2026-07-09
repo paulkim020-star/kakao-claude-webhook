@@ -15,6 +15,12 @@ skill response JSON format (`simpleText`) and returned.
   (`/booking`), 관리자 웹 (`/admin`, HTTP Basic - `ADMIN_PASSWORD` env),
   슬롯 계산/충돌 방지(`engine.py`), 리마인드 알림 스케줄러(`notify.py`).
   기획 배경은 `docs/살롱예약시스템-기획안.md` 참고.
+- `storybook/` - 동화책 생성 독립 모듈. 작가 에이전트(`writer.py`, Claude가
+  페이지별 본문 + 영어 장면 묘사 생성)와 화가 에이전트(`painter.py`, OpenAI
+  `gpt-image-1`로 이미지 생성, `OPENAI_API_KEY` 없으면 프롬프트 텍스트로 대체)를
+  거쳐 자체 완결형 HTML 동화책을 출력(`build.py`). CLI: `python -m storybook "주제"`.
+  FastAPI에 마운트되지 않는 순수 독립 실행 모듈. 관련 env: `OPENAI_API_KEY`(선택),
+  `STORYBOOK_MODEL`/`STORYBOOK_IMAGE_MODEL`/`STORYBOOK_IMAGE_SIZE`.
 - `tests/` - pytest 테스트 (슬롯 계산, 예약 충돌, 웹 플로우).
 - `requirements.txt` - pinned dependencies (fastapi, uvicorn, anthropic, httpx,
   python-dotenv, jinja2, python-multipart).

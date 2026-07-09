@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<style>
+  :root { --paper: #fffdf7; --ink: #3a3226; --accent: #d98c5f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #efe7d8; color: var(--ink);
+         font-family: "Nanum Myeongjo", Georgia, serif; line-height: 1.7; }
+  header { text-align: center; padding: 48px 20px 24px; }
+  header h1 { font-size: 2.2rem; margin: 0; }
+  header p { color: #8a7d68; margin: 8px 0 0; }
+  main { max-width: 760px; margin: 0 auto; padding: 0 20px 80px; }
+  .page { background: var(--paper); border-radius: 18px; padding: 28px;
+          margin: 28px 0; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .page .no { color: var(--accent); font-weight: 700; letter-spacing: .1em; }
+  .page img { width: 100%; border-radius: 12px; display: block; margin: 14px 0; }
+  .page .text { font-size: 1.15rem; white-space: pre-line; }
+  .placeholder { margin: 14px 0; padding: 18px; border: 2px dashed #cbb99a;
+                 border-radius: 12px; background: #fbf5e9; color: #8a7d68; font-size: .92rem; }
+  .placeholder b { color: var(--accent); }
+  .note { max-width: 760px; margin: 0 auto 24px; padding: 12px 20px;
+          color: #8a7d68; font-size: .9rem; text-align: center; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>{{ title }}</h1>
+    <p>Claude 작가 · 화가 에이전트가 만든 그림 동화</p>
+  </header>
+  {% if not image_enabled %}
+  <p class="note">OPENAI_API_KEY를 설정하면 각 페이지에 실제 그림이 생성됩니다. (지금은 이미지 프롬프트를 표시합니다.)</p>
+  {% endif %}
+  <main>
+    {% for page in pages %}
+    <section class="page">
+      <div class="no">{{ loop.index }} / {{ pages|length }}</div>
+      {% if page.image_b64 %}
+      <img src="data:image/png;base64,{{ page.image_b64 }}" alt="page {{ loop.index }} illustration">
+      {% else %}
+      <div class="placeholder"><b>🎨 그림 프롬프트</b><br>{{ page.image_prompt }}</div>
+      {% endif %}
+      <div class="text">{{ page.text }}</div>
+    </section>
+    {% endfor %}
+  </main>
+</body>
+</html>
