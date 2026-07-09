@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <div class="card">
+    <h2>어떤 이야기를 만들까요?</h2>
+    <form method="post" action="/storybook/create">
+      <label>동화 주제</label>
+      <input type="text" name="topic" required
+             placeholder="예: 용감한 토끼의 숲속 모험">
+      <label>페이지 수 (3~10)</label>
+      <input type="number" name="pages" value="6" min="3" max="10">
+      <button class="btn" type="submit">동화책 만들기</button>
+    </form>
+    <p class="muted" style="margin-top:14px">
+      그림 생성에는 시간이 조금 걸릴 수 있어요. 이미지 API 키가 없으면 임시
+      플레이스홀더 그림으로 만들어집니다.
+    </p>
+  </div>
+
+  {% if books %}
+  <div class="card">
+    <h2>지난 동화책</h2>
+    {% for b in books %}
+    <a class="book-link" href="/storybook/book/{{ b['id'] }}">
+      {{ b['title'] }} <span class="when">· {{ b['created_at'] }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endblock %}

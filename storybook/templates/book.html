@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>{{ book['title'] }}</h2>
+    <p class="muted">주제: {{ book['topic'] }}</p>
+  </div>
+
+  {% for p in pages %}
+  <div class="page-card">
+    <img src="{{ p['image'] }}" alt="page {{ p['page_no'] }}">
+    <p class="page-no">{{ p['page_no'] }} 페이지</p>
+    <p class="text">{{ p['text'] }}</p>
+  </div>
+  {% endfor %}
+
+  <a class="btn" href="/storybook">새 동화책 만들기</a>
+{% endblock %}

@@ -15,6 +15,10 @@ skill response JSON format (`simpleText`) and returned.
   (`/booking`), 관리자 웹 (`/admin`, HTTP Basic - `ADMIN_PASSWORD` env),
   슬롯 계산/충돌 방지(`engine.py`), 리마인드 알림 스케줄러(`notify.py`).
   기획 배경은 `docs/살롱예약시스템-기획안.md` 참고.
+- `storybook/` - 동화책 생성 모듈. 작가 에이전트(`writer.py`, Claude가 페이지별
+  이야기 + 삽화 프롬프트 생성)와 화가 에이전트(`painter.py`, 이미지 API 호출,
+  키 없으면 SVG 플레이스홀더로 그레이스풀 폴백)로 그림 동화를 만들어 페이지별
+  HTML로 보여줌(`/storybook`). SQLite 기반(`db.py`, 이미지는 data URL로 저장).
 - `tests/` - pytest 테스트 (슬롯 계산, 예약 충돌, 웹 플로우).
 - `requirements.txt` - pinned dependencies (fastapi, uvicorn, anthropic, httpx,
   python-dotenv, jinja2, python-multipart).
@@ -41,6 +45,11 @@ Booking env vars: `BOOKING_DB` (SQLite path, default `booking.db`),
 사진(`booking/photos.py`): `PHOTO_DIR` (기본 `photos/`) - 고객 희망 스타일 사진과
 시술 결과 사진(정면/측면/뒷면) 저장 폴더. 사진은 반드시 인증 라우트로만 서빙
 (고객: 본인 예약 확인, 관리자: Basic 인증). 정적 경로로 공개 금지.
+
+Storybook env vars: `STORYBOOK_DB` (SQLite path, default `storybook.db`),
+`IMAGE_API_PROVIDER` (기본 `openai`), `OPENAI_API_KEY` (선택 - 없으면 삽화는 SVG
+플레이스홀더로 대체, 동화 텍스트는 정상 생성), `STORYBOOK_IMAGE_SIZE`
+(기본 `1024x1024`). 작가 에이전트는 `ANTHROPIC_API_KEY`/`CLAUDE_MODEL` 공용.
 
 ### Key constraints to keep in mind
 
