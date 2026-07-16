@@ -24,6 +24,7 @@ def run(
     out_dir: str | Path = "out",
     stem: str | None = "vocals",
     make_pdf: bool = True,
+    chords: bool = False,
 ) -> Result:
     """`src` 오디오를 채보한다.
 
@@ -32,6 +33,7 @@ def run(
         out_dir: 중간 산출물과 결과가 쌓이는 폴더.
         stem: 분리해서 채보할 파트("vocals" 등). None 이면 원본 통째로 채보.
         make_pdf: True 면 MuseScore 로 PDF 까지 렌더링(없으면 MusicXML 까지만).
+        chords: True 면 마디별 코드 심볼을 추정해 악보에 표기(다성 MIDI 에서 유효).
     """
     out_dir = Path(out_dir)
 
@@ -44,7 +46,7 @@ def run(
         audio_for_transcribe = stem_wav
 
     midi = transcribe.to_midi(audio_for_transcribe, out_dir)
-    musicxml = notation.midi_to_musicxml(midi, out_dir)
+    musicxml = notation.midi_to_musicxml(midi, out_dir, with_chords=chords)
 
     pdf = None
     if make_pdf:

@@ -29,6 +29,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="PDF 렌더링을 건너뛰고 MusicXML 까지만 생성 (MuseScore 불필요).",
     )
+    p.add_argument(
+        "-c", "--chords",
+        action="store_true",
+        help="마디별 코드 심볼(C, Am, G7...)을 추정해 악보에 표기. 반주가 포함된 파트에 유효.",
+    )
     return p
 
 
@@ -38,7 +43,8 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         result = pipeline.run(
-            args.input, out_dir=args.out, stem=stem, make_pdf=not args.no_pdf
+            args.input, out_dir=args.out, stem=stem,
+            make_pdf=not args.no_pdf, chords=args.chords,
         )
     except (RuntimeError, FileNotFoundError, ValueError) as e:
         print(f"[에러] {e}", file=sys.stderr)

@@ -45,8 +45,8 @@ python -m transcriber.cli 노래.mp3 --out out/
 # 영상(mp4)에서 오디오만 추출해 채보
 python -m transcriber.cli 무대영상.mp4
 
-# 원본을 통째로 채보 (분리 없이)
-python -m transcriber.cli 피아노솔로.mp3 --stem none
+# 원본을 통째로 채보하며 코드 심볼(C, Am, G7...)까지 표기
+python -m transcriber.cli 피아노솔로.mp3 --stem none --chords
 
 # MuseScore 없이 MusicXML 까지만 (직접 MuseScore 로 열어 확인)
 python -m transcriber.cli 노래.mp3 --no-pdf
@@ -58,9 +58,22 @@ python -m transcriber.cli 노래.mp3 --no-pdf
 |------|------|
 | `-o, --out` | 결과 폴더 (기본 `out/`) |
 | `-s, --stem` | 채보할 파트: `vocals`(기본)·`drums`·`bass`·`other`·`none` |
+| `-c, --chords` | 마디별 코드 심볼(C, Am, G7…)을 추정해 악보에 표기 (반주 포함 파트에 유효) |
 | `--no-pdf` | PDF 렌더링 생략, MusicXML 까지만 생성 |
 
-산출물은 `out/` 에 MIDI, MusicXML, PDF 로 쌓입니다.
+산출물은 `out/` 에 MIDI, MusicXML, PDF 로 쌓입니다. 악보는 조성·박자를
+자동 추정해 조표/박자표를 넣고, 음길이를 양자화해 가독성을 높입니다.
+
+## 웹 UI
+
+브라우저에서 파일을 올려 채보하고 악보를 내려받을 수 있습니다.
+
+```bash
+uvicorn transcriber.web.app:app --host 0.0.0.0 --port 8000
+# http://localhost:8000 접속 → 파일 업로드 → 파트/코드/PDF 옵션 선택 → 다운로드
+```
+
+필요한 도구(ffmpeg 등)가 없으면 결과 화면에 무엇을 설치해야 하는지 안내됩니다.
 
 ## 구조
 
@@ -69,11 +82,15 @@ transcriber/
 ├── audio.py       # ffmpeg: mp3/mp4 → WAV
 ├── separate.py    # Demucs: 스템 분리
 ├── transcribe.py  # basic-pitch: 오디오 → MIDI
-├── notation.py    # music21 + MuseScore: MIDI → MusicXML → PDF
+├── notation.py    # music21 + MuseScore: MIDI → 조성/박자 정리 → MusicXML → PDF
+├── chords.py      # 마디별 코드 심볼(반주) 인식
 ├── pipeline.py    # 단계 오케스트레이션
-└── cli.py         # 커맨드라인 진입점
+├── cli.py         # 커맨드라인 진입점
+└── web/           # FastAPI 업로드 UI (app.py + templates/)
 tests/
-└── test_notation.py  # MIDI → MusicXML 변환 검증
+├── test_notation.py  # MIDI → MusicXML, 조성/박자, 코드 표기 검증
+├── test_chords.py    # 코드 심볼 인식 검증
+└── test_web.py       # 웹 라우팅/업로드 흐름 검증
 ```
 
 ## 테스트
@@ -87,7 +104,9 @@ pytest
 
 ## 로드맵 / 개선 여지
 
-- 조성·박자 자동 추정 및 가독성 좋은 조옮김
-- 코드(chord) 인식으로 멜로디 + 반주 채보
-- 피아노 특화 모델(MT3 / Onsets&Frames) 백엔드 선택 옵션
-- 웹 UI (업로드 → 악보 미리보기/다운로드)
+- [x] 조성·박자 자동 추정 및 음길이 양자화로 가독성 개선
+- [x] 코드(chord) 인식으로 코드 심볼 표기
+- [x] 웹 UI (업로드 → 채보 → 다운로드)
+- [ ] 웹에서 악보 미리보기(SVG 렌더링)
+- [ ] 박자표 자동 추정(현재 기본 4/4) 및 읽기 쉬운 조옮김
+- [ ] 피아노 특화 모델(MT3 / Onsets&Frames) 백엔드 선택 옵션

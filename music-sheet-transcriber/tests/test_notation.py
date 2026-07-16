@@ -35,3 +35,31 @@ def test_midi_to_musicxml_roundtrip(tmp_path):
     assert "<score-partwise" in text
     assert "<step>C</step>" in text
     assert "<step>G</step>" in text
+
+
+def test_readability_adds_key_and_time_signature(tmp_path):
+    midi = _make_scale_midi(tmp_path / "scale.mid")
+
+    xml = notation.midi_to_musicxml(
+        midi, tmp_path, detect_key=True, time_signature="4/4"
+    )
+
+    text = xml.read_text(encoding="utf-8")
+    assert "<key>" in text   # 조표 삽입됨
+    assert "<time>" in text  # 박자표 삽입됨
+    assert "<beats>4</beats>" in text
+
+
+def test_with_chords_adds_harmony(tmp_path):
+    from music21 import stream, chord as m21chord
+
+    s = stream.Stream()
+    for pcs in [["C4", "E4", "G4"], ["G4", "B4", "D5"]]:
+        s.append(m21chord.Chord(pcs, quarterLength=4))
+    midi = tmp_path / "prog.mid"
+    s.write("midi", fp=str(midi))
+
+    xml = notation.midi_to_musicxml(midi, tmp_path, with_chords=True)
+
+    text = xml.read_text(encoding="utf-8")
+    assert "<harmony" in text  # 코드 심볼이 harmony 요소로 렌더링됨

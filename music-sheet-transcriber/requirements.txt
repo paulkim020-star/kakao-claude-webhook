@@ -3,7 +3,13 @@
 
 basic-pitch>=0.3        # 오디오 → MIDI (Spotify)
 demucs>=4.0             # 스템 분리 (Meta) - 풀 믹스 곡에 권장
-music21>=9.1            # MIDI → MusicXML, 악보 정리
+music21>=9.1            # MIDI → MusicXML, 악보 정리, 코드 인식
+
+# 웹 업로드 UI
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9  # 파일 업로드 폼 파싱
+jinja2>=3.1
 
 # 시스템 의존성 (pip 아님, 별도 설치 필요):
 #   - ffmpeg   : mp3/mp4 디코딩

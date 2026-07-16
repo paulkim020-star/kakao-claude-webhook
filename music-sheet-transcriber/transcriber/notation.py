@@ -1,8 +1,8 @@
 """MIDI → 악보(MusicXML, PDF).
 
-music21 로 MIDI 를 읽어 박자/음정을 정리한 뒤 MusicXML 로 저장하고,
-MuseScore(또는 LilyPond) CLI 로 PDF 를 렌더링한다. 자동 채보 결과는
-잡음이 많으므로 여기서 양자화(quantize)로 최소한의 정리를 한다.
+music21 로 MIDI 를 읽어 가독성을 높인 뒤(양자화 + 조성/박자 삽입) MusicXML 로
+저장하고, MuseScore(또는 LilyPond) CLI 로 PDF 를 렌더링한다. 자동 채보 결과는
+잡음이 많으므로 이 단계의 정리가 최종 악보 품질을 크게 좌우한다.
 """
 from __future__ import annotations
 
@@ -22,24 +22,65 @@ def _find_musescore() -> str | None:
     return None
 
 
-def midi_to_musicxml(midi_path: str | Path, dst_dir: str | Path) -> Path:
-    """MIDI 를 정리해 MusicXML 로 저장하고 경로를 돌려준다."""
-    midi_path = Path(midi_path)
-    dst_dir = Path(dst_dir)
-    dst_dir.mkdir(parents=True, exist_ok=True)
+def midi_to_score(
+    midi_path: str | Path,
+    *,
+    detect_key: bool = True,
+    time_signature: str | None = "4/4",
+):
+    """MIDI 를 읽어 가독성을 높인 music21 Score 를 돌려준다.
 
+    - 양자화: 자동 채보로 어긋난 음길이를 16분음표 그리드에 맞춘다.
+    - 박자표: `time_signature` 를 첫 마디에 넣는다(None 이면 생략).
+    - 조성: `detect_key` 면 조성을 추정해 조표를 넣는다(안 되면 조용히 건너뜀).
+    """
     try:
-        from music21 import converter
+        from music21 import converter, meter
     except ImportError as e:  # pragma: no cover - 설치 안내용
         raise RuntimeError("music21 이 설치되어 있지 않습니다: `pip install music21`.") from e
 
     score = converter.parse(str(midi_path))
-    # 자동 채보 노트 길이는 어긋나기 마련 -> 16분음표 그리드로 양자화
     score.quantize(inPlace=True)
 
-    dst = dst_dir / f"{midi_path.stem}.musicxml"
+    part = score.parts[0] if score.parts else score
+    if time_signature:
+        part.insert(0, meter.TimeSignature(time_signature))
+    if detect_key:
+        try:
+            part.insert(0, score.analyze("key"))
+        except Exception:
+            pass  # 조성 추정 실패는 치명적이지 않음
+
+    return score
+
+
+def write_musicxml(score, dst_dir: str | Path, stem_name: str) -> Path:
+    """music21 Score 를 MusicXML 파일로 저장한다."""
+    dst_dir = Path(dst_dir)
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    dst = dst_dir / f"{stem_name}.musicxml"
     score.write("musicxml", fp=str(dst))
     return dst
+
+
+def midi_to_musicxml(
+    midi_path: str | Path,
+    dst_dir: str | Path,
+    *,
+    detect_key: bool = True,
+    time_signature: str | None = "4/4",
+    with_chords: bool = False,
+) -> Path:
+    """MIDI 를 정리(+선택적 코드 심볼)해 MusicXML 로 저장하고 경로를 돌려준다."""
+    midi_path = Path(midi_path)
+    score = midi_to_score(
+        midi_path, detect_key=detect_key, time_signature=time_signature
+    )
+    if with_chords:
+        from . import chords
+
+        chords.annotate(score)
+    return write_musicxml(score, dst_dir, midi_path.stem)
 
 
 def musicxml_to_pdf(musicxml_path: str | Path, dst_dir: str | Path) -> Path:
