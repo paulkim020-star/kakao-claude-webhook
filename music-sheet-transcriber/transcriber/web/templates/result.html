@@ -12,6 +12,8 @@
     li { margin: .5rem 0; }
     a.dl { display: inline-block; background: #1565c0; color: #fff; text-decoration: none; padding: .5rem .9rem; border-radius: 8px; }
     a.back { display: inline-block; margin-top: 1.5rem; color: #1565c0; }
+    .preview { margin-top: 1.5rem; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; overflow-x: auto; background: #fff; }
+    .preview svg { max-width: 100%; height: auto; }
   </style>
 </head>
 <body>
@@ -27,6 +29,13 @@
       <li><a class="dl" href="/download/{{ job }}/{{ name }}">{{ label }} 다운로드</a></li>
       {% endfor %}
     </ul>
+
+    {% if svg_pages %}
+    <h2 style="font-size:1.1rem;">미리보기</h2>
+    <div class="preview">
+      {% for page in svg_pages %}{{ page|safe }}{% endfor %}
+    </div>
+    {% endif %}
   {% endif %}
 
   <a class="back" href="/">← 다른 파일 채보하기</a>

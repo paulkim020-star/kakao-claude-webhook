@@ -89,10 +89,13 @@ python -m transcriber.cli 노래.mp3 --no-pdf
 
 ```bash
 uvicorn transcriber.web.app:app --host 0.0.0.0 --port 8000
-# http://localhost:8000 접속 → 파일 업로드 → 파트/코드/PDF 옵션 선택 → 다운로드
+# http://localhost:8000 접속 → 파일 업로드 → 엔진/파트/코드/PDF 옵션 선택
+# → 결과 화면에서 악보 미리보기(verovio SVG) 확인 + 다운로드
 ```
 
-필요한 도구(ffmpeg 등)가 없으면 결과 화면에 무엇을 설치해야 하는지 안내됩니다.
+채보가 끝나면 **악보를 브라우저에서 바로 미리보기**(verovio SVG 렌더링, MuseScore
+불필요)하고 MIDI·MusicXML·PDF 를 내려받습니다. 필요한 도구(ffmpeg 등)가 없으면
+결과 화면에 무엇을 설치해야 하는지 안내됩니다.
 
 ## 구조
 
@@ -129,6 +132,6 @@ pytest
 - [x] 코드(chord) 인식으로 코드 심볼 표기
 - [x] 웹 UI (업로드 → 채보 → 다운로드)
 - [x] Pop2Piano 엔진(대중가요 → 피아노 커버) 백엔드 선택
-- [ ] 웹에서 악보 미리보기(SVG 렌더링)
+- [x] 웹에서 악보 미리보기(verovio SVG 렌더링)
 - [ ] 박자표 자동 추정(현재 기본 4/4) 및 읽기 쉬운 조옮김
 - [ ] MT3 / Onsets&Frames 백엔드 추가 (멀티트랙·피아노 정밀도)

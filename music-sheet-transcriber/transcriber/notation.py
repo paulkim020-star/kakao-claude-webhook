@@ -83,6 +83,28 @@ def midi_to_musicxml(
     return write_musicxml(score, dst_dir, midi_path.stem)
 
 
+def musicxml_to_svg(musicxml_path: str | Path) -> list[str]:
+    """MusicXML 을 페이지별 SVG 마크업 리스트로 렌더링한다(verovio).
+
+    MuseScore 없이 순수 파이썬으로 동작해 웹 인라인 미리보기에 쓴다.
+    """
+    try:
+        import verovio
+    except ImportError as e:  # pragma: no cover - 설치 안내용
+        raise RuntimeError("verovio 가 설치되어 있지 않습니다: `pip install verovio`.") from e
+
+    # 폰트/리소스 경로를 명시적으로 지정한다. 자동 탐지는 실행 컨텍스트
+    # (예: 웹 워커 스레드)에 따라 실패해 폰트 로딩 에러가 날 수 있다.
+    import os
+
+    toolkit = verovio.toolkit(False)
+    toolkit.setResourcePath(os.path.join(os.path.dirname(verovio.__file__), "data"))
+    toolkit.setOptions({"adjustPageHeight": True, "scale": 40, "pageWidth": 2100})
+    if not toolkit.loadFile(str(musicxml_path)):
+        raise RuntimeError("verovio 가 MusicXML 을 불러오지 못했습니다.")
+    return [toolkit.renderToSVG(i) for i in range(1, toolkit.getPageCount() + 1)]
+
+
 def musicxml_to_pdf(musicxml_path: str | Path, dst_dir: str | Path) -> Path:
     """MusicXML 을 PDF 로 렌더링한다. MuseScore CLI 필요."""
     musicxml_path = Path(musicxml_path)

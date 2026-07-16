@@ -15,6 +15,7 @@ from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from .. import notation
 from ..pipeline import run
 from ..separate import STEMS
 from ..transcribe import ENGINES
@@ -50,7 +51,7 @@ async def transcribe(
     with src.open("wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    ctx: dict = {"job": job, "error": None, "files": {}}
+    ctx: dict = {"job": job, "error": None, "files": {}, "svg_pages": []}
     try:
         result = run(
             src,
@@ -67,6 +68,13 @@ async def transcribe(
     for label, p in (("PDF", result.pdf), ("MusicXML", result.musicxml), ("MIDI", result.midi)):
         if p:
             ctx["files"][label] = p.name
+
+    # 악보 인라인 미리보기(verovio). 실패해도 다운로드는 되도록 감싼다.
+    try:
+        ctx["svg_pages"] = notation.musicxml_to_svg(result.musicxml)
+    except Exception:
+        ctx["svg_pages"] = []
+
     return templates.TemplateResponse(request, "result.html", ctx)
 
 

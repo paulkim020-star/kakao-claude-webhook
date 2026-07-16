@@ -63,3 +63,22 @@ def test_with_chords_adds_harmony(tmp_path):
 
     text = xml.read_text(encoding="utf-8")
     assert "<harmony" in text  # 코드 심볼이 harmony 요소로 렌더링됨
+
+
+def test_musicxml_to_svg_renders():
+    verovio = pytest.importorskip("verovio")  # noqa: F841
+
+    import tempfile
+    from music21 import stream, note
+
+    with tempfile.TemporaryDirectory() as d:
+        s = stream.Stream()
+        for name in ["C4", "E4", "G4", "C5"]:
+            s.append(note.Note(name, quarterLength=1))
+        xml = f"{d}/mel.musicxml"
+        s.write("musicxml", fp=xml)
+
+        pages = notation.musicxml_to_svg(xml)
+
+    assert len(pages) >= 1
+    assert "<svg" in pages[0]
