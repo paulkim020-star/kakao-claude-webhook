@@ -26,12 +26,16 @@ def midi_to_score(
     midi_path: str | Path,
     *,
     detect_key: bool = True,
-    time_signature: str | None = "4/4",
+    time_signature: str = "auto",
 ):
     """MIDI 를 읽어 가독성을 높인 music21 Score 를 돌려준다.
 
     - 양자화: 자동 채보로 어긋난 음길이를 16분음표 그리드에 맞춘다.
-    - 박자표: `time_signature` 를 첫 마디에 넣는다(None 이면 생략).
+    - 박자표: ``"auto"`` 면 MIDI 에 심긴 박자표를 그대로 존중한다(pop2piano/piano
+      처럼 박자 구조가 있는 엔진 출력에서 3/4·6/8 등이 살아난다). ``"4/4"``
+      같은 값을 주면 그 박자표로 강제 지정한다. (참고: basic-pitch 처럼 박자
+      메타가 없는 MIDI 는 파싱 시 4/4 로 기본 설정된다 — 내용 기반 박자 추론은
+      하지 않는다.)
     - 조성: `detect_key` 면 조성을 추정해 조표를 넣는다(안 되면 조용히 건너뜀).
     """
     try:
@@ -43,7 +47,10 @@ def midi_to_score(
     score.quantize(inPlace=True)
 
     part = score.parts[0] if score.parts else score
-    if time_signature:
+    if time_signature and time_signature != "auto":
+        # 강제 지정: 기존(파싱된) 박자표를 제거하고 지정 값으로 교체
+        for existing in list(part.recurse().getElementsByClass(meter.TimeSignature)):
+            part.remove(existing, recurse=True)
         part.insert(0, meter.TimeSignature(time_signature))
     if detect_key:
         try:
@@ -68,7 +75,7 @@ def midi_to_musicxml(
     dst_dir: str | Path,
     *,
     detect_key: bool = True,
-    time_signature: str | None = "4/4",
+    time_signature: str = "auto",
     with_chords: bool = False,
 ) -> Path:
     """MIDI 를 정리(+선택적 코드 심볼)해 MusicXML 로 저장하고 경로를 돌려준다."""

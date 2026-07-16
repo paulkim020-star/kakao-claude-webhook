@@ -50,6 +50,38 @@ def test_readability_adds_key_and_time_signature(tmp_path):
     assert "<beats>4</beats>" in text
 
 
+def _make_waltz_midi(path):
+    """3/4 박자표가 심긴 MIDI 를 만든다."""
+    from music21 import stream, note, meter
+
+    s = stream.Stream()
+    s.append(meter.TimeSignature("3/4"))
+    for _ in range(4):
+        for name in ["C4", "E4", "G4"]:
+            s.append(note.Note(name, quarterLength=1))
+    s.write("midi", fp=str(path))
+    return path
+
+
+def test_time_signature_auto_respects_embedded_meter(tmp_path):
+    midi = _make_waltz_midi(tmp_path / "waltz.mid")
+
+    xml = notation.midi_to_musicxml(midi, tmp_path, time_signature="auto")
+
+    text = xml.read_text(encoding="utf-8")
+    assert "<beats>3</beats>" in text  # MIDI 의 3/4 가 보존됨
+
+
+def test_time_signature_explicit_overrides(tmp_path):
+    midi = _make_waltz_midi(tmp_path / "waltz.mid")
+
+    xml = notation.midi_to_musicxml(midi, tmp_path, time_signature="4/4")
+
+    text = xml.read_text(encoding="utf-8")
+    assert "<beats>4</beats>" in text  # 강제 지정이 3/4 를 덮어씀
+    assert "<beats>3</beats>" not in text
+
+
 def test_with_chords_adds_harmony(tmp_path):
     from music21 import stream, chord as m21chord
 

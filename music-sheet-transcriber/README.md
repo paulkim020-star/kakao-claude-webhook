@@ -83,11 +83,15 @@ python -m transcriber.cli 노래.mp3 --no-pdf
 | `-e, --engine` | 채보 엔진: `basic-pitch`(기본)·`pop2piano`·`piano` |
 | `-s, --stem` | 채보할 파트: `vocals`(기본)·`drums`·`bass`·`other`·`none` (pop2piano 엔진에선 무시) |
 | `--composer` | pop2piano 스타일 프리셋 `composer1`..`composer21` (기본 `composer1`) |
+| `--time` | 박자표. `auto`(기본)=MIDI 박자표 존중, `3/4`·`4/4` 등=강제 지정 |
 | `-c, --chords` | 마디별 코드 심볼(C, Am, G7…)을 추정해 악보에 표기 (반주 포함 파트에 유효) |
 | `--no-pdf` | PDF 렌더링 생략, MusicXML 까지만 생성 |
 
-산출물은 `out/` 에 MIDI, MusicXML, PDF 로 쌓입니다. 악보는 조성·박자를
-자동 추정해 조표/박자표를 넣고, 음길이를 양자화해 가독성을 높입니다.
+산출물은 `out/` 에 MIDI, MusicXML, PDF 로 쌓입니다. 악보는 조성을 자동 추정해
+조표를 넣고, 음길이를 양자화해 가독성을 높입니다. 박자표는 `--time auto`(기본)
+에서 MIDI 에 심긴 박자표를 존중합니다 — pop2piano/piano 처럼 박자 구조가 있는
+엔진 출력에서 3/4·6/8 등이 살아납니다. (basic-pitch 처럼 박자 메타가 없는 MIDI
+는 4/4 로 기본 설정됩니다. 필요하면 `--time 3/4` 로 강제 지정하세요.)
 
 ## 웹 UI
 
@@ -140,5 +144,7 @@ pytest
 - [x] Pop2Piano 엔진(대중가요 → 피아노 커버) 백엔드 선택
 - [x] 웹에서 악보 미리보기(verovio SVG 렌더링)
 - [x] 피아노 특화 엔진(Onsets&Frames 계열, Kong 외 2021) 추가
-- [ ] 박자표 자동 추정(현재 기본 4/4) 및 읽기 쉬운 조옮김
+- [x] 박자표 auto 존중(MIDI 메타 기반) + 강제 지정 옵션
+- [ ] 박자 메타 없는 MIDI 의 내용 기반 박자 추론(3/4 vs 4/4 등)
+- [ ] 읽기 쉬운 조옮김
 - [ ] MT3 멀티트랙 백엔드 추가 (여러 악기 동시 채보)

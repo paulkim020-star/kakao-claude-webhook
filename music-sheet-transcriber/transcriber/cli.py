@@ -38,6 +38,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="pop2piano 스타일 프리셋 (composer1..composer21, 기본: composer1). 그 외 엔진에선 무시.",
     )
     p.add_argument(
+        "--time",
+        default="auto",
+        metavar="박자표",
+        help="박자표. 'auto'(기본)면 MIDI 의 박자표를 존중, '3/4'·'4/4' 등이면 강제 지정.",
+    )
+    p.add_argument(
         "--no-pdf",
         action="store_true",
         help="PDF 렌더링을 건너뛰고 MusicXML 까지만 생성 (MuseScore 불필요).",
@@ -59,6 +65,7 @@ def main(argv: list[str] | None = None) -> int:
             args.input, out_dir=args.out, stem=stem,
             make_pdf=not args.no_pdf, chords=args.chords,
             engine=args.engine, composer=args.composer,
+            time_signature=args.time,
         )
     except (RuntimeError, FileNotFoundError, ValueError) as e:
         print(f"[에러] {e}", file=sys.stderr)

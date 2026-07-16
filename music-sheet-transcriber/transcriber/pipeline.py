@@ -27,6 +27,7 @@ def run(
     chords: bool = False,
     engine: str = transcribe.BASIC_PITCH,
     composer: str = "composer1",
+    time_signature: str = "auto",
 ) -> Result:
     """`src` 오디오를 채보한다.
 
@@ -39,6 +40,7 @@ def run(
         engine: 채보 백엔드. ``basic-pitch``(파트/멜로디용) 또는
             ``pop2piano``(대중가요 → 피아노 커버).
         composer: pop2piano 스타일 프리셋. 그 외 엔진에서는 무시.
+        time_signature: ``"auto"`` 면 MIDI 의 박자표를 존중, ``"4/4"`` 등이면 강제.
     """
     out_dir = Path(out_dir)
 
@@ -63,7 +65,9 @@ def run(
     midi = transcribe.to_midi(
         audio_for_transcribe, out_dir, engine=engine, composer=composer
     )
-    musicxml = notation.midi_to_musicxml(midi, out_dir, with_chords=chords)
+    musicxml = notation.midi_to_musicxml(
+        midi, out_dir, with_chords=chords, time_signature=time_signature
+    )
 
     pdf = None
     if make_pdf:
