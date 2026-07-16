@@ -82,6 +82,38 @@ def test_time_signature_explicit_overrides(tmp_path):
     assert "<beats>3</beats>" not in text
 
 
+def _make_d_major_midi(path):
+    """D 장조(♯2개) 음계 MIDI 를 만든다."""
+    from music21 import stream, note
+
+    s = stream.Stream()
+    for _ in range(2):
+        for name in ["D4", "E4", "F#4", "G4", "A4", "B4", "C#5", "D5"]:
+            s.append(note.Note(name, quarterLength=0.5))
+    s.write("midi", fp=str(path))
+    return path
+
+
+def test_transpose_easy_moves_to_c_major(tmp_path):
+    midi = _make_d_major_midi(tmp_path / "dmaj.mid")
+
+    xml = notation.midi_to_musicxml(midi, tmp_path, transpose="easy")
+
+    text = xml.read_text(encoding="utf-8")
+    # D 장조(♯2) → C 장조(♯♭ 0): 조표가 0 으로, F# 이 사라져야 함
+    assert "<fifths>0</fifths>" in text
+    assert "alter" not in text  # 임시표/조표 변화음이 없음(전부 흰건반)
+
+
+def test_transpose_off_keeps_original_key(tmp_path):
+    midi = _make_d_major_midi(tmp_path / "dmaj.mid")
+
+    xml = notation.midi_to_musicxml(midi, tmp_path, transpose="off")
+
+    text = xml.read_text(encoding="utf-8")
+    assert "<fifths>2</fifths>" in text  # D 장조 조표(♯2) 유지
+
+
 def test_with_chords_adds_harmony(tmp_path):
     from music21 import stream, chord as m21chord
 

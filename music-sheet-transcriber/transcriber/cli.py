@@ -44,6 +44,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="박자표. 'auto'(기본)면 MIDI 의 박자표를 존중, '3/4'·'4/4' 등이면 강제 지정.",
     )
     p.add_argument(
+        "--transpose",
+        choices=["off", "easy"],
+        default="off",
+        help="'easy' 면 읽기 쉬운 조(장조→C, 단조→a단조)로 전조. 기본 'off'(원조 유지).",
+    )
+    p.add_argument(
         "--no-pdf",
         action="store_true",
         help="PDF 렌더링을 건너뛰고 MusicXML 까지만 생성 (MuseScore 불필요).",
@@ -65,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
             args.input, out_dir=args.out, stem=stem,
             make_pdf=not args.no_pdf, chords=args.chords,
             engine=args.engine, composer=args.composer,
-            time_signature=args.time,
+            time_signature=args.time, transpose=args.transpose,
         )
     except (RuntimeError, FileNotFoundError, ValueError) as e:
         print(f"[에러] {e}", file=sys.stderr)

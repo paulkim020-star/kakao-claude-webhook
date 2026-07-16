@@ -22,11 +22,42 @@ def _find_musescore() -> str | None:
     return None
 
 
+def _transpose_readable(score):
+    """복잡한 조를 읽기 쉬운 조로 옮긴다: 장조→C, 단조→a단조.
+
+    옥타브 이동이 최소가 되는 방향으로 전조한다(음정은 유지, 조표만 단순화).
+    조성 추정 실패 시 원본을 그대로 돌려준다.
+    """
+    from music21 import interval, pitch
+
+    try:
+        k = score.analyze("key")
+    except Exception:
+        return score
+
+    target_name = "A" if k.mode == "minor" else "C"
+    tonic = k.tonic
+    base_octave = tonic.octave or 4
+
+    best = None
+    for octave in (base_octave - 1, base_octave, base_octave + 1):
+        candidate = pitch.Pitch(target_name)
+        candidate.octave = octave
+        itv = interval.Interval(noteStart=tonic, noteEnd=candidate)
+        if best is None or abs(itv.semitones) < abs(best.semitones):
+            best = itv
+
+    if best is None or best.semitones == 0:
+        return score
+    return score.transpose(best)
+
+
 def midi_to_score(
     midi_path: str | Path,
     *,
     detect_key: bool = True,
     time_signature: str = "auto",
+    transpose: str = "off",
 ):
     """MIDI 를 읽어 가독성을 높인 music21 Score 를 돌려준다.
 
@@ -36,6 +67,8 @@ def midi_to_score(
       같은 값을 주면 그 박자표로 강제 지정한다. (참고: basic-pitch 처럼 박자
       메타가 없는 MIDI 는 파싱 시 4/4 로 기본 설정된다 — 내용 기반 박자 추론은
       하지 않는다.)
+    - 전조: ``transpose="easy"`` 면 조표가 단순한 조(장조→C, 단조→a단조)로 옮겨
+      읽기 쉽게 한다. ``"off"``(기본)면 원조 유지.
     - 조성: `detect_key` 면 조성을 추정해 조표를 넣는다(안 되면 조용히 건너뜀).
     """
     try:
@@ -46,15 +79,20 @@ def midi_to_score(
     score = converter.parse(str(midi_path))
     score.quantize(inPlace=True)
 
-    part = score.parts[0] if score.parts else score
     if time_signature and time_signature != "auto":
         # 강제 지정: 기존(파싱된) 박자표를 제거하고 지정 값으로 교체
+        part = score.parts[0] if score.parts else score
         for existing in list(part.recurse().getElementsByClass(meter.TimeSignature)):
             part.remove(existing, recurse=True)
         part.insert(0, meter.TimeSignature(time_signature))
+
+    if transpose == "easy":
+        score = _transpose_readable(score)  # 전조된 새 Score 로 교체
+
     if detect_key:
+        part = score.parts[0] if score.parts else score
         try:
-            part.insert(0, score.analyze("key"))
+            part.insert(0, score.analyze("key"))  # 전조 후의 조를 조표로
         except Exception:
             pass  # 조성 추정 실패는 치명적이지 않음
 
@@ -76,12 +114,16 @@ def midi_to_musicxml(
     *,
     detect_key: bool = True,
     time_signature: str = "auto",
+    transpose: str = "off",
     with_chords: bool = False,
 ) -> Path:
     """MIDI 를 정리(+선택적 코드 심볼)해 MusicXML 로 저장하고 경로를 돌려준다."""
     midi_path = Path(midi_path)
     score = midi_to_score(
-        midi_path, detect_key=detect_key, time_signature=time_signature
+        midi_path,
+        detect_key=detect_key,
+        time_signature=time_signature,
+        transpose=transpose,
     )
     if with_chords:
         from . import chords

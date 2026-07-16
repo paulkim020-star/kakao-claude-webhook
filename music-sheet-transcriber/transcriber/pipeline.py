@@ -28,6 +28,7 @@ def run(
     engine: str = transcribe.BASIC_PITCH,
     composer: str = "composer1",
     time_signature: str = "auto",
+    transpose: str = "off",
 ) -> Result:
     """`src` 오디오를 채보한다.
 
@@ -41,6 +42,7 @@ def run(
             ``pop2piano``(대중가요 → 피아노 커버).
         composer: pop2piano 스타일 프리셋. 그 외 엔진에서는 무시.
         time_signature: ``"auto"`` 면 MIDI 의 박자표를 존중, ``"4/4"`` 등이면 강제.
+        transpose: ``"easy"`` 면 읽기 쉬운 조(장조→C, 단조→a단조)로 전조, ``"off"``=원조.
     """
     out_dir = Path(out_dir)
 
@@ -66,7 +68,8 @@ def run(
         audio_for_transcribe, out_dir, engine=engine, composer=composer
     )
     musicxml = notation.midi_to_musicxml(
-        midi, out_dir, with_chords=chords, time_signature=time_signature
+        midi, out_dir, with_chords=chords,
+        time_signature=time_signature, transpose=transpose,
     )
 
     pdf = None

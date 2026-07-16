@@ -36,7 +36,7 @@ def _patch_pipeline(monkeypatch, calls, tmp_path):
         p.write_bytes(b"")
         return p
 
-    def fake_xml(midi, dst, with_chords=False, time_signature="auto"):
+    def fake_xml(midi, dst, with_chords=False, time_signature="auto", transpose="off"):
         p = Path(dst) / "a.musicxml"
         p.write_text("x")
         return p
