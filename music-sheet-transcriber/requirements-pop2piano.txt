@@ -1,0 +1,7 @@
+# Pop2Piano 엔진(--engine pop2piano) 전용 추가 의존성.
+# 대중가요 오디오를 피아노 커버로 채보한다 (Choi & Lee, arXiv:2211.00895).
+# torch + transformers 로 모델이 무겁다(수백 MB 다운로드).
+-r requirements.txt
+transformers>=4.40     # Pop2PianoForConditionalGeneration / Pop2PianoProcessor
+librosa>=0.10          # 44100Hz 오디오 로딩
+torch>=2.0             # 모델 실행 백엔드

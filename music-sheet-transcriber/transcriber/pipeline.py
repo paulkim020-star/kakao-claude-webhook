@@ -25,6 +25,8 @@ def run(
     stem: str | None = "vocals",
     make_pdf: bool = True,
     chords: bool = False,
+    engine: str = transcribe.BASIC_PITCH,
+    composer: str = "composer1",
 ) -> Result:
     """`src` 오디오를 채보한다.
 
@@ -34,10 +36,21 @@ def run(
         stem: 분리해서 채보할 파트("vocals" 등). None 이면 원본 통째로 채보.
         make_pdf: True 면 MuseScore 로 PDF 까지 렌더링(없으면 MusicXML 까지만).
         chords: True 면 마디별 코드 심볼을 추정해 악보에 표기(다성 MIDI 에서 유효).
+        engine: 채보 백엔드. ``basic-pitch``(파트/멜로디용) 또는
+            ``pop2piano``(대중가요 → 피아노 커버).
+        composer: pop2piano 스타일 프리셋. 그 외 엔진에서는 무시.
     """
     out_dir = Path(out_dir)
 
-    wav = audio.to_wav(src, out_dir)
+    # Pop2Piano 는 풀 믹스를 그대로 받아 피아노 커버를 만든다 -> 스템 분리는
+    # 의미가 없고, 입력 샘플레이트도 44100Hz 를 쓴다.
+    if engine == transcribe.POP2PIANO:
+        stem = None
+        sample_rate = transcribe.POP2PIANO_SR
+    else:
+        sample_rate = audio.TARGET_SR
+
+    wav = audio.to_wav(src, out_dir, sample_rate=sample_rate)
 
     stem_wav = None
     audio_for_transcribe = wav
@@ -45,7 +58,9 @@ def run(
         stem_wav = separate.separate(wav, out_dir / "stems", stem=stem)
         audio_for_transcribe = stem_wav
 
-    midi = transcribe.to_midi(audio_for_transcribe, out_dir)
+    midi = transcribe.to_midi(
+        audio_for_transcribe, out_dir, engine=engine, composer=composer
+    )
     musicxml = notation.midi_to_musicxml(midi, out_dir, with_chords=chords)
 
     pdf = None

@@ -30,7 +30,18 @@
     </div>
 
     <div>
-      <label for="stem">채보할 파트</label>
+      <label for="engine">채보 엔진</label>
+      <select id="engine" name="engine">
+        {% for e in engines %}
+        <option value="{{ e }}" {% if e == 'basic-pitch' %}selected{% endif %}>
+          {{ e }}{% if e == 'basic-pitch' %} (범용·파트 채보){% elif e == 'pop2piano' %} (대중가요 → 피아노 커버){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="stem">채보할 파트 <small>(basic-pitch 엔진에서만)</small></label>
       <select id="stem" name="stem">
         {% for s in stems %}
         <option value="{{ s }}" {% if s == 'vocals' %}selected{% endif %}>

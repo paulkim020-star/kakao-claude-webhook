@@ -17,6 +17,7 @@ from fastapi.templating import Jinja2Templates
 
 from ..pipeline import run
 from ..separate import STEMS
+from ..transcribe import ENGINES
 
 BASE = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
@@ -28,7 +29,7 @@ app = FastAPI(title="music-sheet-transcriber")
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     return templates.TemplateResponse(
-        request, "index.html", {"stems": [*STEMS, "none"]}
+        request, "index.html", {"stems": [*STEMS, "none"], "engines": list(ENGINES)}
     )
 
 
@@ -36,6 +37,7 @@ def index(request: Request):
 async def transcribe(
     request: Request,
     file: UploadFile = File(...),
+    engine: str = Form("basic-pitch"),
     stem: str = Form("vocals"),
     chords: bool = Form(False),
     pdf: bool = Form(False),
@@ -56,6 +58,7 @@ async def transcribe(
             stem=None if stem == "none" else stem,
             make_pdf=pdf,
             chords=chords,
+            engine=engine,
         )
     except Exception as e:  # 도구 미설치/채보 실패를 화면에 그대로 안내
         ctx["error"] = str(e)

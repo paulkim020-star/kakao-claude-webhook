@@ -4,8 +4,19 @@
 
 ```
 mp3/mp4 ─▶ WAV ─▶ (선택) 스템 분리 ─▶ MIDI ─▶ MusicXML ─▶ PDF
-        ffmpeg        Demucs        basic-pitch   music21   MuseScore
+        ffmpeg        Demucs      채보 엔진   music21   MuseScore
 ```
+
+## 채보 엔진 (논문 기반)
+
+| 엔진 | 근거 논문 | 적합 케이스 |
+|------|-----------|-------------|
+| `basic-pitch` (기본) | Bittner 외, *A Lightweight Instrument-Agnostic Model for Polyphonic Note Transcription*, ICASSP 2022 | 특정 파트/멜로디를 MIDI 로. 스템 분리와 조합 |
+| `pop2piano` | Choi & Lee, *Pop2Piano: Pop Audio-based Piano Cover Generation*, [arXiv:2211.00895](https://arxiv.org/abs/2211.00895) | **대중가요 → 피아노 커버**. 멜로디/코드 추출 없이 풀 믹스에서 직접 피아노 MIDI 생성 |
+
+`pop2piano` 는 풀 믹스를 그대로 입력받아 피아노 커버를 만들므로 **스템 분리를
+생략**하고 44100Hz 로 처리합니다. 대중가요를 피아노 악보로 뽑는 것이 목표라면
+이 엔진이 정통 경로입니다.
 
 ## ⚠️ 먼저 알아둘 것 (현실적인 기대치)
 
@@ -34,6 +45,9 @@ brew install --cask musescore
 
 # 2) 파이썬 의존성 (torch/tensorflow 를 끌어와 용량이 큽니다)
 pip install -r requirements.txt
+
+# 3) (선택) Pop2Piano 엔진을 쓰려면 추가 설치
+pip install -r requirements-pop2piano.txt
 ```
 
 ## 사용법
@@ -48,6 +62,9 @@ python -m transcriber.cli 무대영상.mp4
 # 원본을 통째로 채보하며 코드 심볼(C, Am, G7...)까지 표기
 python -m transcriber.cli 피아노솔로.mp3 --stem none --chords
 
+# 대중가요를 피아노 커버 악보로 (Pop2Piano 엔진, 스템 분리 생략)
+python -m transcriber.cli 대중가요.mp3 --engine pop2piano
+
 # MuseScore 없이 MusicXML 까지만 (직접 MuseScore 로 열어 확인)
 python -m transcriber.cli 노래.mp3 --no-pdf
 ```
@@ -57,7 +74,9 @@ python -m transcriber.cli 노래.mp3 --no-pdf
 | 옵션 | 설명 |
 |------|------|
 | `-o, --out` | 결과 폴더 (기본 `out/`) |
-| `-s, --stem` | 채보할 파트: `vocals`(기본)·`drums`·`bass`·`other`·`none` |
+| `-e, --engine` | 채보 엔진: `basic-pitch`(기본)·`pop2piano` |
+| `-s, --stem` | 채보할 파트: `vocals`(기본)·`drums`·`bass`·`other`·`none` (pop2piano 엔진에선 무시) |
+| `--composer` | pop2piano 스타일 프리셋 `composer1`..`composer21` (기본 `composer1`) |
 | `-c, --chords` | 마디별 코드 심볼(C, Am, G7…)을 추정해 악보에 표기 (반주 포함 파트에 유효) |
 | `--no-pdf` | PDF 렌더링 생략, MusicXML 까지만 생성 |
 
@@ -82,15 +101,17 @@ transcriber/
 ├── audio.py       # ffmpeg: mp3/mp4 → WAV
 ├── separate.py    # Demucs: 스템 분리
 ├── transcribe.py  # basic-pitch: 오디오 → MIDI
+├── transcribe.py  # 채보 엔진: basic-pitch / pop2piano
 ├── notation.py    # music21 + MuseScore: MIDI → 조성/박자 정리 → MusicXML → PDF
 ├── chords.py      # 마디별 코드 심볼(반주) 인식
-├── pipeline.py    # 단계 오케스트레이션
+├── pipeline.py    # 단계 오케스트레이션 (엔진별 분기)
 ├── cli.py         # 커맨드라인 진입점
 └── web/           # FastAPI 업로드 UI (app.py + templates/)
 tests/
-├── test_notation.py  # MIDI → MusicXML, 조성/박자, 코드 표기 검증
-├── test_chords.py    # 코드 심볼 인식 검증
-└── test_web.py       # 웹 라우팅/업로드 흐름 검증
+├── test_notation.py    # MIDI → MusicXML, 조성/박자, 코드 표기 검증
+├── test_chords.py      # 코드 심볼 인식 검증
+├── test_transcribe.py  # 엔진 선택 및 pop2piano 라우팅 검증
+└── test_web.py         # 웹 라우팅/업로드 흐름 검증
 ```
 
 ## 테스트
@@ -107,6 +128,7 @@ pytest
 - [x] 조성·박자 자동 추정 및 음길이 양자화로 가독성 개선
 - [x] 코드(chord) 인식으로 코드 심볼 표기
 - [x] 웹 UI (업로드 → 채보 → 다운로드)
+- [x] Pop2Piano 엔진(대중가요 → 피아노 커버) 백엔드 선택
 - [ ] 웹에서 악보 미리보기(SVG 렌더링)
 - [ ] 박자표 자동 추정(현재 기본 4/4) 및 읽기 쉬운 조옮김
-- [ ] 피아노 특화 모델(MT3 / Onsets&Frames) 백엔드 선택 옵션
+- [ ] MT3 / Onsets&Frames 백엔드 추가 (멀티트랙·피아노 정밀도)

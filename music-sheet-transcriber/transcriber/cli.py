@@ -9,6 +9,7 @@ import sys
 
 from . import pipeline
 from .separate import STEMS
+from .transcribe import ENGINES
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -19,10 +20,21 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("input", help="입력 오디오/영상 파일 (mp3, mp4, m4a, wav ...)")
     p.add_argument("-o", "--out", default="out", help="결과 폴더 (기본: out)")
     p.add_argument(
+        "-e", "--engine",
+        choices=list(ENGINES),
+        default="basic-pitch",
+        help="채보 엔진 (기본: basic-pitch). 'pop2piano' 는 대중가요를 피아노 커버로 채보(스템 분리 생략).",
+    )
+    p.add_argument(
         "-s", "--stem",
         choices=[*STEMS, "none"],
         default="vocals",
-        help="채보할 분리 파트 (기본: vocals). 'none' 이면 원본 통째로 채보.",
+        help="채보할 분리 파트 (기본: vocals). 'none' 이면 원본 통째로. (pop2piano 엔진에선 무시)",
+    )
+    p.add_argument(
+        "--composer",
+        default="composer1",
+        help="pop2piano 스타일 프리셋 (composer1..composer21, 기본: composer1). 그 외 엔진에선 무시.",
     )
     p.add_argument(
         "--no-pdf",
@@ -45,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
         result = pipeline.run(
             args.input, out_dir=args.out, stem=stem,
             make_pdf=not args.no_pdf, chords=args.chords,
+            engine=args.engine, composer=args.composer,
         )
     except (RuntimeError, FileNotFoundError, ValueError) as e:
         print(f"[에러] {e}", file=sys.stderr)
