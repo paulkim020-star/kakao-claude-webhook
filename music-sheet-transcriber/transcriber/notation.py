@@ -6,6 +6,7 @@ music21 로 MIDI 를 읽어 가독성을 높인 뒤(양자화 + 조성/박자 �
 """
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -22,34 +23,64 @@ def _find_musescore() -> str | None:
     return None
 
 
-def _transpose_readable(score):
-    """복잡한 조를 읽기 쉬운 조로 옮긴다: 장조→C, 단조→a단조.
-
-    옥타브 이동이 최소가 되는 방향으로 전조한다(음정은 유지, 조표만 단순화).
-    조성 추정 실패 시 원본을 그대로 돌려준다.
-    """
+def _nearest_interval(from_pitch, target_name: str):
+    """`from_pitch` 에서 `target_name` 음까지, 옥타브 이동이 최소인 음정을 찾는다."""
     from music21 import interval, pitch
 
-    try:
-        k = score.analyze("key")
-    except Exception:
-        return score
-
-    target_name = "A" if k.mode == "minor" else "C"
-    tonic = k.tonic
-    base_octave = tonic.octave or 4
-
+    base_octave = from_pitch.octave or 4
     best = None
     for octave in (base_octave - 1, base_octave, base_octave + 1):
         candidate = pitch.Pitch(target_name)
         candidate.octave = octave
-        itv = interval.Interval(noteStart=tonic, noteEnd=candidate)
+        itv = interval.Interval(noteStart=from_pitch, noteEnd=candidate)
         if best is None or abs(itv.semitones) < abs(best.semitones):
             best = itv
+    return best
 
-    if best is None or best.semitones == 0:
+
+def _transpose_to_tonic(score, target_name: str):
+    """현재 조의 으뜸음을 `target_name` 으로 옮긴다(옥타브 이동 최소)."""
+    try:
+        k = score.analyze("key")
+    except Exception:
         return score
-    return score.transpose(best)
+    itv = _nearest_interval(k.tonic, target_name)
+    if itv is None or itv.semitones == 0:
+        return score
+    return score.transpose(itv)
+
+
+def _apply_transpose(score, spec: str):
+    """`spec` 에 따라 전조한다.
+
+    - ``"off"``: 원조 유지
+    - ``"easy"``: 읽기 쉬운 조로 (장조→C, 단조→a단조)
+    - 부호 있는 정수(``"+2"``, ``"-3"``): 반음 단위로 올림/내림 (키 조정)
+
+    (특정 조 이름으로의 전조는 조성 자동 추정이 상대조를 잡는 등 불확실해
+    지원하지 않는다. 확실한 키 조정은 반음 단위를 쓴다.)
+    """
+    spec = (spec or "off").strip()
+    if spec in ("", "off"):
+        return score
+    if spec == "easy":
+        target = "A" if _safe_mode(score) == "minor" else "C"
+        return _transpose_to_tonic(score, target)
+    if re.fullmatch(r"[+-]?\d+", spec):
+        semitones = int(spec)
+        if semitones == 0:
+            return score
+        from music21 import interval
+
+        return score.transpose(interval.Interval(semitones))
+    return score  # 해석 불가한 값은 무시
+
+
+def _safe_mode(score) -> str:
+    try:
+        return score.analyze("key").mode
+    except Exception:
+        return "major"
 
 
 def midi_to_score(
@@ -67,8 +98,8 @@ def midi_to_score(
       같은 값을 주면 그 박자표로 강제 지정한다. (참고: basic-pitch 처럼 박자
       메타가 없는 MIDI 는 파싱 시 4/4 로 기본 설정된다 — 내용 기반 박자 추론은
       하지 않는다.)
-    - 전조: ``transpose="easy"`` 면 조표가 단순한 조(장조→C, 단조→a단조)로 옮겨
-      읽기 쉽게 한다. ``"off"``(기본)면 원조 유지.
+    - 전조(`transpose`): ``"off"``(기본)=원조, ``"easy"``=읽기 쉬운 조(장조→C,
+      단조→a단조), ``"+2"``/``"-3"``=반음 단위 올림/내림(키 조정).
     - 조성: `detect_key` 면 조성을 추정해 조표를 넣는다(안 되면 조용히 건너뜀).
     """
     try:
@@ -86,8 +117,8 @@ def midi_to_score(
             part.remove(existing, recurse=True)
         part.insert(0, meter.TimeSignature(time_signature))
 
-    if transpose == "easy":
-        score = _transpose_readable(score)  # 전조된 새 Score 로 교체
+    if transpose and transpose != "off":
+        score = _apply_transpose(score, transpose)  # 전조된 새 Score 로 교체
 
     if detect_key:
         part = score.parts[0] if score.parts else score

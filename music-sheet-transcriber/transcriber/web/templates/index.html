@@ -56,9 +56,18 @@
       <label for="chords">코드 심볼 표기 (C, Am, G7 … · 반주 포함 파트에 유효)</label>
     </div>
 
-    <div class="row">
-      <input id="transpose_easy" type="checkbox" name="transpose_easy" value="true">
-      <label for="transpose_easy">읽기 쉬운 조로 전조 (장조→C, 단조→a단조)</label>
+    <div>
+      <label for="transpose">전조 / 키 조정</label>
+      <select id="transpose" name="transpose">
+        <option value="off" selected>원조 유지</option>
+        <option value="easy">읽기 쉬운 조 (장조→C, 단조→a단조)</option>
+        <option value="+1">키 +1 (반음 올림)</option>
+        <option value="+2">키 +2</option>
+        <option value="+3">키 +3</option>
+        <option value="-1">키 -1 (반음 내림)</option>
+        <option value="-2">키 -2</option>
+        <option value="-3">키 -3</option>
+      </select>
     </div>
 
     <div class="row">

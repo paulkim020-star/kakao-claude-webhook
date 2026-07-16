@@ -41,7 +41,7 @@ async def transcribe(
     engine: str = Form("basic-pitch"),
     stem: str = Form("vocals"),
     chords: bool = Form(False),
-    transpose_easy: bool = Form(False),
+    transpose: str = Form("off"),
     pdf: bool = Form(False),
 ):
     job = uuid.uuid4().hex[:8]
@@ -61,7 +61,7 @@ async def transcribe(
             make_pdf=pdf,
             chords=chords,
             engine=engine,
-            transpose="easy" if transpose_easy else "off",
+            transpose=transpose,
         )
     except Exception as e:  # 도구 미설치/채보 실패를 화면에 그대로 안내
         ctx["error"] = str(e)

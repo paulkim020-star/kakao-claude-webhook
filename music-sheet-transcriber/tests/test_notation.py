@@ -114,6 +114,24 @@ def test_transpose_off_keeps_original_key(tmp_path):
     assert "<fifths>2</fifths>" in text  # D 장조 조표(♯2) 유지
 
 
+def test_transpose_semitones_up(tmp_path):
+    # C 조에서 +2 반음(키 올림) -> ♯2 (D 조 축)
+    midi = _make_scale_midi(tmp_path / "c.mid")
+
+    xml = notation.midi_to_musicxml(midi, tmp_path, transpose="+2")
+
+    assert "<fifths>2</fifths>" in xml.read_text(encoding="utf-8")
+
+
+def test_transpose_semitones_down(tmp_path):
+    # C 조에서 -2 반음(키 내림) -> ♭2 (Bb 조 축)
+    midi = _make_scale_midi(tmp_path / "c.mid")
+
+    xml = notation.midi_to_musicxml(midi, tmp_path, transpose="-2")
+
+    assert "<fifths>-2</fifths>" in xml.read_text(encoding="utf-8")
+
+
 def test_with_chords_adds_harmony(tmp_path):
     from music21 import stream, chord as m21chord
 

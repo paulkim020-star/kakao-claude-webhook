@@ -74,6 +74,10 @@ python -m transcriber.cli 피아노연주.mp3 --engine piano
 # 조표가 복잡한 곡을 읽기 쉬운 조(C장조/a단조)로 전조
 python -m transcriber.cli 노래.mp3 --transpose easy
 
+# 노래 키를 2반음 올리기 / 내리기 (보컬 키 조정)
+python -m transcriber.cli 노래.mp3 --transpose +2
+python -m transcriber.cli 노래.mp3 --transpose -2
+
 # MuseScore 없이 MusicXML 까지만 (직접 MuseScore 로 열어 확인)
 python -m transcriber.cli 노래.mp3 --no-pdf
 ```
@@ -87,7 +91,7 @@ python -m transcriber.cli 노래.mp3 --no-pdf
 | `-s, --stem` | 채보할 파트: `vocals`(기본)·`drums`·`bass`·`other`·`none` (pop2piano 엔진에선 무시) |
 | `--composer` | pop2piano 스타일 프리셋 `composer1`..`composer21` (기본 `composer1`) |
 | `--time` | 박자표. `auto`(기본)=MIDI 박자표 존중, `3/4`·`4/4` 등=강제 지정 |
-| `--transpose` | `off`(기본)·`easy`(읽기 쉬운 조로 전조: 장조→C, 단조→a단조) |
+| `--transpose` | 전조/키 조정. `off`(기본)·`easy`(장조→C, 단조→a단조)·`+2`/`-3`(반음 올림/내림) |
 | `-c, --chords` | 마디별 코드 심볼(C, Am, G7…)을 추정해 악보에 표기 (반주 포함 파트에 유효) |
 | `--no-pdf` | PDF 렌더링 생략, MusicXML 까지만 생성 |
 
@@ -150,5 +154,5 @@ pytest
 - [x] 피아노 특화 엔진(Onsets&Frames 계열, Kong 외 2021) 추가
 - [x] 박자표 auto 존중(MIDI 메타 기반) + 강제 지정 옵션
 - [ ] 박자 메타 없는 MIDI 의 내용 기반 박자 추론(3/4 vs 4/4 등)
-- [x] 읽기 쉬운 조옮김(`--transpose easy`: 장조→C, 단조→a단조)
+- [x] 읽기 쉬운 조옮김 + 반음 단위 키 올림/내림(`--transpose easy`/`+2`/`-2`)
 - [ ] MT3 멀티트랙 백엔드 추가 (여러 악기 동시 채보)

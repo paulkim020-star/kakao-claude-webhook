@@ -45,9 +45,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--transpose",
-        choices=["off", "easy"],
         default="off",
-        help="'easy' 면 읽기 쉬운 조(장조→C, 단조→a단조)로 전조. 기본 'off'(원조 유지).",
+        metavar="전조",
+        help="전조/키 조정. 'off'(기본)=원조, 'easy'=읽기 쉬운 조(장조→C, 단조→a단조), "
+             "'+2'·'-3'=반음 올림/내림(키 조정).",
     )
     p.add_argument(
         "--no-pdf",
