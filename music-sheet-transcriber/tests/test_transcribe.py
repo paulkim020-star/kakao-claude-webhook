@@ -73,3 +73,16 @@ def test_basic_pitch_separates_and_uses_default_sr(monkeypatch, tmp_path):
     assert calls["separated"] == "vocals"  # 스템 분리 수행
     assert calls["sr"] == audio.TARGET_SR
     assert calls["engine"] == "basic-pitch"
+
+
+def test_piano_engine_skips_separation(monkeypatch, tmp_path):
+    calls: dict = {}
+    _patch_pipeline(monkeypatch, calls, tmp_path)
+
+    pipeline.run(
+        "solo.mp3", out_dir=tmp_path, engine="piano",
+        stem="vocals", make_pdf=False,
+    )
+
+    assert "separated" not in calls  # 피아노 엔진도 스템 분리 생략
+    assert calls["engine"] == "piano"

@@ -23,13 +23,14 @@ def build_parser() -> argparse.ArgumentParser:
         "-e", "--engine",
         choices=list(ENGINES),
         default="basic-pitch",
-        help="채보 엔진 (기본: basic-pitch). 'pop2piano' 는 대중가요를 피아노 커버로 채보(스템 분리 생략).",
+        help="채보 엔진 (기본: basic-pitch). 'pop2piano'=대중가요→피아노 커버, "
+             "'piano'=솔로 피아노 고해상도 채보 (둘 다 스템 분리 생략).",
     )
     p.add_argument(
         "-s", "--stem",
         choices=[*STEMS, "none"],
         default="vocals",
-        help="채보할 분리 파트 (기본: vocals). 'none' 이면 원본 통째로. (pop2piano 엔진에선 무시)",
+        help="채보할 분리 파트 (기본: vocals). 'none' 이면 원본 통째로. (pop2piano/piano 엔진에선 무시)",
     )
     p.add_argument(
         "--composer",

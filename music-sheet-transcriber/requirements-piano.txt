@@ -1,0 +1,6 @@
+# 피아노 특화 엔진(--engine piano) 전용 추가 의존성.
+# 솔로 피아노 오디오를 고해상도로 채보한다 (Kong 외, 2021, Onsets&Frames 계열).
+# torch + 체크포인트 다운로드로 무겁다.
+-r requirements.txt
+piano_transcription_inference>=0.0.4   # PianoTranscription / load_audio
+torch>=1.10                            # 모델 실행 백엔드

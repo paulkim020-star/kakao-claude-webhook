@@ -13,10 +13,12 @@ mp3/mp4 ─▶ WAV ─▶ (선택) 스템 분리 ─▶ MIDI ─▶ MusicXML ─
 |------|-----------|-------------|
 | `basic-pitch` (기본) | Bittner 외, *A Lightweight Instrument-Agnostic Model for Polyphonic Note Transcription*, ICASSP 2022 | 특정 파트/멜로디를 MIDI 로. 스템 분리와 조합 |
 | `pop2piano` | Choi & Lee, *Pop2Piano: Pop Audio-based Piano Cover Generation*, [arXiv:2211.00895](https://arxiv.org/abs/2211.00895) | **대중가요 → 피아노 커버**. 멜로디/코드 추출 없이 풀 믹스에서 직접 피아노 MIDI 생성 |
+| `piano` | Kong 외, *High-resolution Piano Transcription with Pedals by Regressing Onset and Offset Times*, 2021 (Onsets&Frames 계열) | **솔로 피아노 녹음**을 고해상도로 채보. 풀 믹스가 아닌 피아노 연주 오디오에 적합 |
 
 `pop2piano` 는 풀 믹스를 그대로 입력받아 피아노 커버를 만들므로 **스템 분리를
 생략**하고 44100Hz 로 처리합니다. 대중가요를 피아노 악보로 뽑는 것이 목표라면
-이 엔진이 정통 경로입니다.
+이 엔진이 정통 경로입니다. `piano` 엔진도 오디오를 직접 받으므로 스템 분리를
+생략하며, **솔로 피아노 녹음**에 쓰는 것이 맞습니다(풀 믹스에 쓰면 부정확).
 
 ## ⚠️ 먼저 알아둘 것 (현실적인 기대치)
 
@@ -46,8 +48,9 @@ brew install --cask musescore
 # 2) 파이썬 의존성 (torch/tensorflow 를 끌어와 용량이 큽니다)
 pip install -r requirements.txt
 
-# 3) (선택) Pop2Piano 엔진을 쓰려면 추가 설치
-pip install -r requirements-pop2piano.txt
+# 3) (선택) 엔진별 추가 설치
+pip install -r requirements-pop2piano.txt   # 대중가요 → 피아노 커버
+pip install -r requirements-piano.txt        # 솔로 피아노 고해상도 채보
 ```
 
 ## 사용법
@@ -65,6 +68,9 @@ python -m transcriber.cli 피아노솔로.mp3 --stem none --chords
 # 대중가요를 피아노 커버 악보로 (Pop2Piano 엔진, 스템 분리 생략)
 python -m transcriber.cli 대중가요.mp3 --engine pop2piano
 
+# 솔로 피아노 녹음을 고해상도로 채보 (piano 엔진)
+python -m transcriber.cli 피아노연주.mp3 --engine piano
+
 # MuseScore 없이 MusicXML 까지만 (직접 MuseScore 로 열어 확인)
 python -m transcriber.cli 노래.mp3 --no-pdf
 ```
@@ -74,7 +80,7 @@ python -m transcriber.cli 노래.mp3 --no-pdf
 | 옵션 | 설명 |
 |------|------|
 | `-o, --out` | 결과 폴더 (기본 `out/`) |
-| `-e, --engine` | 채보 엔진: `basic-pitch`(기본)·`pop2piano` |
+| `-e, --engine` | 채보 엔진: `basic-pitch`(기본)·`pop2piano`·`piano` |
 | `-s, --stem` | 채보할 파트: `vocals`(기본)·`drums`·`bass`·`other`·`none` (pop2piano 엔진에선 무시) |
 | `--composer` | pop2piano 스타일 프리셋 `composer1`..`composer21` (기본 `composer1`) |
 | `-c, --chords` | 마디별 코드 심볼(C, Am, G7…)을 추정해 악보에 표기 (반주 포함 파트에 유효) |
@@ -104,7 +110,7 @@ transcriber/
 ├── audio.py       # ffmpeg: mp3/mp4 → WAV
 ├── separate.py    # Demucs: 스템 분리
 ├── transcribe.py  # basic-pitch: 오디오 → MIDI
-├── transcribe.py  # 채보 엔진: basic-pitch / pop2piano
+├── transcribe.py  # 채보 엔진: basic-pitch / pop2piano / piano
 ├── notation.py    # music21 + MuseScore: MIDI → 조성/박자 정리 → MusicXML → PDF
 ├── chords.py      # 마디별 코드 심볼(반주) 인식
 ├── pipeline.py    # 단계 오케스트레이션 (엔진별 분기)
@@ -133,5 +139,6 @@ pytest
 - [x] 웹 UI (업로드 → 채보 → 다운로드)
 - [x] Pop2Piano 엔진(대중가요 → 피아노 커버) 백엔드 선택
 - [x] 웹에서 악보 미리보기(verovio SVG 렌더링)
+- [x] 피아노 특화 엔진(Onsets&Frames 계열, Kong 외 2021) 추가
 - [ ] 박자표 자동 추정(현재 기본 4/4) 및 읽기 쉬운 조옮김
-- [ ] MT3 / Onsets&Frames 백엔드 추가 (멀티트랙·피아노 정밀도)
+- [ ] MT3 멀티트랙 백엔드 추가 (여러 악기 동시 채보)

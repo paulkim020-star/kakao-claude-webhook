@@ -34,7 +34,7 @@
       <select id="engine" name="engine">
         {% for e in engines %}
         <option value="{{ e }}" {% if e == 'basic-pitch' %}selected{% endif %}>
-          {{ e }}{% if e == 'basic-pitch' %} (범용·파트 채보){% elif e == 'pop2piano' %} (대중가요 → 피아노 커버){% endif %}
+          {{ e }}{% if e == 'basic-pitch' %} (범용·파트 채보){% elif e == 'pop2piano' %} (대중가요 → 피아노 커버){% elif e == 'piano' %} (솔로 피아노 고해상도){% endif %}
         </option>
         {% endfor %}
       </select>

@@ -42,13 +42,15 @@ def run(
     """
     out_dir = Path(out_dir)
 
-    # Pop2Piano 는 풀 믹스를 그대로 받아 피아노 커버를 만든다 -> 스템 분리는
-    # 의미가 없고, 입력 샘플레이트도 44100Hz 를 쓴다.
-    if engine == transcribe.POP2PIANO:
+    # pop2piano/piano 는 오디오를 그대로 받아 피아노 MIDI 를 만든다 -> 스템
+    # 분리는 의미가 없다. Pop2Piano 는 44100Hz 입력을 쓴다.
+    if engine in transcribe.DIRECT_AUDIO_ENGINES:
         stem = None
-        sample_rate = transcribe.POP2PIANO_SR
-    else:
-        sample_rate = audio.TARGET_SR
+    sample_rate = (
+        transcribe.POP2PIANO_SR
+        if engine == transcribe.POP2PIANO
+        else audio.TARGET_SR
+    )
 
     wav = audio.to_wav(src, out_dir, sample_rate=sample_rate)
 

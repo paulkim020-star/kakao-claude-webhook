@@ -7,6 +7,9 @@
   Transformer (Choi & Lee, *Pop2Piano: Pop Audio-based Piano Cover
   Generation*, arXiv:2211.00895). 멜로디/코드 추출 없이 풀 믹스에서 직접
   피아노 MIDI 를 만든다 → "대중가요 → 피아노 악보" 케이스에 정통 경로.
+- ``piano``: 피아노 연주 녹음을 고해상도로 채보하는 Onsets&Frames 계열 모델
+  (Kong 외, *High-resolution Piano Transcription with Pedals by Regressing
+  Onset and Offset Times*, 2021). **솔로 피아노 오디오**에 적합(풀 믹스가 아님).
 """
 from __future__ import annotations
 
@@ -14,7 +17,11 @@ from pathlib import Path
 
 BASIC_PITCH = "basic-pitch"
 POP2PIANO = "pop2piano"
-ENGINES = (BASIC_PITCH, POP2PIANO)
+PIANO = "piano"
+ENGINES = (BASIC_PITCH, POP2PIANO, PIANO)
+
+# 오디오를 그대로 받아 피아노 MIDI 를 만드는 엔진(스템 분리 불필요).
+DIRECT_AUDIO_ENGINES = (POP2PIANO, PIANO)
 
 # Pop2Piano 는 44100Hz 오디오를 입력으로 쓴다.
 POP2PIANO_SR = 44100
@@ -41,6 +48,8 @@ def to_midi(
         return _basic_pitch(Path(audio_path), dst_dir)
     if engine == POP2PIANO:
         return _pop2piano(Path(audio_path), dst_dir, composer=composer)
+    if engine == PIANO:
+        return _piano(Path(audio_path), dst_dir)
     raise ValueError(f"알 수 없는 엔진: {engine!r} (가능: {ENGINES})")
 
 
@@ -88,4 +97,23 @@ def _pop2piano(audio_path: Path, dst_dir: Path, *, composer: str = "composer1") 
 
     dst = dst_dir / f"{audio_path.stem}.mid"
     midi_obj.write(str(dst))
+    return dst
+
+
+def _piano(audio_path: Path, dst_dir: Path) -> Path:
+    try:
+        from piano_transcription_inference import (
+            PianoTranscription,
+            load_audio,
+            sample_rate,
+        )
+    except ImportError as e:  # pragma: no cover - 설치 안내용
+        raise RuntimeError(
+            "피아노 엔진에는 piano_transcription_inference 가 필요합니다: "
+            "`pip install -r requirements-piano.txt`."
+        ) from e
+
+    audio, _ = load_audio(str(audio_path), sr=sample_rate, mono=True)
+    dst = dst_dir / f"{audio_path.stem}.mid"
+    PianoTranscription(device="cpu").transcribe(audio, str(dst))
     return dst
