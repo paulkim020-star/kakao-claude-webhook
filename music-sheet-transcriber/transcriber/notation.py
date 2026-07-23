@@ -187,6 +187,7 @@ def midi_to_score(
     transpose: str = "off",
     merge_repeats: bool = False,
     melody_only: bool = False,
+    beat_times: list[float] | None = None,
 ):
     """MIDI 를 읽어 가독성을 높인 music21 Score 를 돌려준다.
 
@@ -205,23 +206,30 @@ def midi_to_score(
     except ImportError as e:  # pragma: no cover - 설치 안내용
         raise RuntimeError("music21 이 설치되어 있지 않습니다: `pip install music21`.") from e
 
-    score = converter.parse(str(midi_path))
-    # 단순화(merge) 시엔 8분음표 그리드로 굵게 양자화해 잇단음표 잡음을 없앤다.
-    # 평소엔 16분음표+셋잇단(기본)으로 더 정밀하게.
-    if merge_repeats:
-        score.quantize(quarterLengthDivisors=(2,), inPlace=True)
+    if beat_times:
+        # 실제 박(beat) 그리드에 음표를 정렬해 노래 리듬대로 마디/리듬을 구성한다.
+        # (이미 단선율 + 4/4 로 만들어지므로 아래 양자화/melody_only 는 건너뜀.)
+        from . import beats
+
+        score = beats.beat_aligned_score(midi_path, beat_times)
     else:
-        score.quantize(inPlace=True)
+        score = converter.parse(str(midi_path))
+        # 단순화(merge) 시엔 8분음표 그리드로 굵게 양자화해 잇단음표 잡음을 없앤다.
+        # 평소엔 16분음표+셋잇단(기본)으로 더 정밀하게.
+        if merge_repeats:
+            score.quantize(quarterLengthDivisors=(2,), inPlace=True)
+        else:
+            score.quantize(inPlace=True)
 
-    if time_signature and time_signature != "auto":
-        # 강제 지정: 기존(파싱된) 박자표를 제거하고 지정 값으로 교체
-        part = score.parts[0] if score.parts else score
-        for existing in list(part.recurse().getElementsByClass(meter.TimeSignature)):
-            part.remove(existing, recurse=True)
-        part.insert(0, meter.TimeSignature(time_signature))
+        if time_signature and time_signature != "auto":
+            # 강제 지정: 기존(파싱된) 박자표를 제거하고 지정 값으로 교체
+            part = score.parts[0] if score.parts else score
+            for existing in list(part.recurse().getElementsByClass(meter.TimeSignature)):
+                part.remove(existing, recurse=True)
+            part.insert(0, meter.TimeSignature(time_signature))
 
-    if melody_only:
-        score = to_monophonic(score)  # 겹친 음을 최고음 한 줄(멜로디)로 축약
+        if melody_only:
+            score = to_monophonic(score)  # 겹친 음을 최고음 한 줄(멜로디)로 축약
 
     if merge_repeats:
         score = merge_repeated_notes(score)  # 같은 음 연속을 하나로 합침
@@ -257,6 +265,7 @@ def midi_to_musicxml(
     transpose: str = "off",
     merge_repeats: bool = False,
     melody_only: bool = False,
+    beat_times: list[float] | None = None,
     with_chords: bool = False,
     chord_source_midi: str | Path | None = None,
 ) -> Path:
@@ -273,6 +282,7 @@ def midi_to_musicxml(
         transpose=transpose,
         merge_repeats=merge_repeats,
         melody_only=melody_only,
+        beat_times=beat_times,
     )
     if with_chords:
         from . import chords

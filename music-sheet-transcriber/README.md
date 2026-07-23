@@ -77,6 +77,9 @@ python -m transcriber.cli 노래.mp3 --stem vocals --chords
 # 같은 음 연속을 하나로 합쳐 더 단순하게 (가사 없을 때)
 python -m transcriber.cli 노래.mp3 --stem vocals --chords --merge
 
+# 실제 박자에 리듬을 정렬해 노래답게 (가장 "악보다운" 결과)
+python -m transcriber.cli 노래.mp3 --stem vocals --chords --beats
+
 # 조표가 복잡한 곡을 읽기 쉬운 조(C장조/a단조)로 전조
 python -m transcriber.cli 노래.mp3 --transpose easy
 
@@ -101,6 +104,7 @@ python -m transcriber.cli 노래.mp3 --no-pdf
 | `-c, --chords` | 코드 심볼(C, Am, G7…)을 **악보 위에** 표기(음표엔 반영 안 함, 기타 반주용). 보컬 스템이면 분리된 반주에서 코드를 뽑는다 |
 | `--no-tidy` | 보컬 정리(음역대 제한/짧은 잔음 제거)를 끈다. 기본은 보컬 스템일 때 자동 |
 | `--merge` | 이어지는 같은 음정의 음표를 하나의 긴 음표로 합쳐 단순화 (가사 없을 때 유용) |
+| `--beats` | 곡의 실제 박(beat)을 검출해 음표를 박 그리드에 정렬 → 리듬/마디선이 노래 흐름대로 |
 | `--no-pdf` | PDF 렌더링 생략, MusicXML 까지만 생성 |
 
 산출물은 `out/` 에 MIDI, MusicXML, PDF 로 쌓입니다. 악보는 조성을 자동 추정해
@@ -131,6 +135,7 @@ transcriber/
 ├── separate.py    # Demucs: 스템 분리
 ├── transcribe.py  # basic-pitch: 오디오 → MIDI
 ├── transcribe.py  # 채보 엔진: basic-pitch / pop2piano / piano
+├── beats.py       # 박자 추적 + 박 그리드 리듬 정렬 (--beats)
 ├── notation.py    # music21 + MuseScore: MIDI → 조성/박자 정리 → MusicXML → PDF
 ├── chords.py      # 마디별 코드 심볼(반주) 인식
 ├── pipeline.py    # 단계 오케스트레이션 (엔진별 분기)

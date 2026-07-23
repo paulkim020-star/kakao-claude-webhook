@@ -70,6 +70,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="이어지는 같은 음정의 음표들을 하나의 긴 음표로 합쳐 악보를 단순화한다(가사 없을 때 유용).",
     )
+    p.add_argument(
+        "--beats",
+        action="store_true",
+        help="곡의 실제 박(beat)을 검출해 음표를 그 박 그리드에 정렬한다. 리듬/마디선이 노래 흐름대로 읽혀 훨씬 악보답다.",
+    )
     return p
 
 
@@ -84,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
             engine=args.engine, composer=args.composer,
             time_signature=args.time, transpose=args.transpose,
             tidy=(False if args.no_tidy else None), merge_repeats=args.merge,
+            beat_align=args.beats,
         )
     except (RuntimeError, FileNotFoundError, ValueError) as e:
         print(f"[에러] {e}", file=sys.stderr)

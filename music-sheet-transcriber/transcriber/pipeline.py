@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import audio, notation, separate, transcribe
+from . import audio, beats, notation, separate, transcribe
 
 
 @dataclass
@@ -31,6 +31,7 @@ def run(
     transpose: str = "off",
     tidy: bool | None = None,
     merge_repeats: bool = False,
+    beat_align: bool = False,
 ) -> Result:
     """`src` 오디오를 채보한다.
 
@@ -89,10 +90,19 @@ def run(
     # 보컬 멜로디 스템은 단선율(최고음 한 줄)로 축약해 멜로디 악보로 만든다.
     melody_only = stem == "vocals"
 
+    # 박자 정렬: 원본 믹스(드럼/베이스 있음)에서 박을 검출해 멜로디를 그 그리드에
+    # 맞춘다. 실패해도 일반 경로로 진행.
+    beat_times = None
+    if beat_align:
+        try:
+            _tempo, beat_times = beats.detect_beats(wav)
+        except Exception:
+            beat_times = None
+
     musicxml = notation.midi_to_musicxml(
         midi, out_dir, with_chords=chords, chord_source_midi=chord_source_midi,
         time_signature=time_signature, transpose=transpose,
-        merge_repeats=merge_repeats, melody_only=melody_only,
+        merge_repeats=merge_repeats, melody_only=melody_only, beat_times=beat_times,
     )
 
     pdf = None

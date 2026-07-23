@@ -10,6 +10,8 @@ basic-pitch>=0.3        # 오디오 → MIDI (Spotify)
 demucs>=4.0             # 스템 분리 (Meta) - 풀 믹스 곡에 권장
 music21>=9.1            # MIDI → MusicXML, 악보 정리, 코드 인식
 verovio>=4.0           # MusicXML → SVG (웹 악보 미리보기, MuseScore 불필요)
+librosa>=0.10          # 박자(beat) 추적 - --beats (basic-pitch 가 이미 끌어옴)
+pretty_midi>=0.2       # 박자 정렬용 MIDI 파싱 (basic-pitch 가 이미 끌어옴)
 
 # 웹 업로드 UI
 fastapi>=0.110
