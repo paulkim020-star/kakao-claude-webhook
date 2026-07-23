@@ -71,6 +71,9 @@ python -m transcriber.cli 대중가요.mp3 --engine pop2piano
 # 솔로 피아노 녹음을 고해상도로 채보 (piano 엔진)
 python -m transcriber.cli 피아노연주.mp3 --engine piano
 
+# 보컬 멜로디(자동 정리) + 반주에서 뽑은 코드 = 기타용 리드시트
+python -m transcriber.cli 노래.mp3 --stem vocals --chords
+
 # 조표가 복잡한 곡을 읽기 쉬운 조(C장조/a단조)로 전조
 python -m transcriber.cli 노래.mp3 --transpose easy
 
@@ -92,7 +95,8 @@ python -m transcriber.cli 노래.mp3 --no-pdf
 | `--composer` | pop2piano 스타일 프리셋 `composer1`..`composer21` (기본 `composer1`) |
 | `--time` | 박자표. `auto`(기본)=MIDI 박자표 존중, `3/4`·`4/4` 등=강제 지정 |
 | `--transpose` | 전조/키 조정. `off`(기본)·`easy`(장조→C, 단조→a단조)·`+2`/`-3`(반음 올림/내림) |
-| `-c, --chords` | 마디별 코드 심볼(C, Am, G7…)을 추정해 악보에 표기 (반주 포함 파트에 유효) |
+| `-c, --chords` | 코드 심볼(C, Am, G7…)을 **악보 위에** 표기(음표엔 반영 안 함, 기타 반주용). 보컬 스템이면 분리된 반주에서 코드를 뽑는다 |
+| `--no-tidy` | 보컬 정리(음역대 제한/짧은 잔음 제거)를 끈다. 기본은 보컬 스템일 때 자동 |
 | `--no-pdf` | PDF 렌더링 생략, MusicXML 까지만 생성 |
 
 산출물은 `out/` 에 MIDI, MusicXML, PDF 로 쌓입니다. 악보는 조성을 자동 추정해

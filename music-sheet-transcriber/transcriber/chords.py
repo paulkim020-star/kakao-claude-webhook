@@ -52,34 +52,55 @@ def detect(score) -> list[tuple[float, str]]:
     return events
 
 
-def annotate(score) -> list[tuple[float, str]]:
-    """`score` 에 코드 심볼을 삽입해 악보 위에 표기되게 한다(in place).
-
-    코드 심볼은 마디 안에 넣어야 악보에 렌더링되므로, 마디 번호를 맞춰
-    대상 파트의 각 마디 시작 지점에 삽입한다. 삽입된 이벤트 목록을 돌려준다.
-    """
-    from music21 import harmony
-
-    parts = getattr(score, "parts", None)
-    target = parts[0] if parts is not None and len(parts) else score
-    target_measures = {m.number: m for m in target.getElementsByClass("Measure")}
-
-    events: list[tuple[float, str]] = []
+def _measure_figures(score) -> dict[int, str]:
+    """마디 번호 -> 코드 심볼 문자열. 각 마디의 울리는 음을 모아 하나로 판정한다."""
+    figures: dict[int, str] = {}
     for measure in score.chordify().getElementsByClass("Measure"):
         names: list[str] = []
         for c in measure.getElementsByClass("Chord"):
             names += [p.name for p in c.pitches]
         figure = _clean_symbol(names)
-        if not figure:
+        if figure:
+            figures[measure.number] = figure
+    return figures
+
+
+def _insert(target_score, figures: dict[int, str]) -> list[tuple[int, str]]:
+    """`figures`(마디→코드)를 target_score 각 마디 위에 코드 심볼로 얹는다.
+
+    코드 심볼은 오선 위에 텍스트(C, Am, G7...)로만 표기되고 음표(오선)에는
+    반영되지 않는다 - 기타 반주용 리드시트 방식. 삽입된 목록을 돌려준다.
+    """
+    from music21 import harmony
+
+    parts = getattr(target_score, "parts", None)
+    target = parts[0] if parts is not None and len(parts) else target_score
+    measures = {m.number: m for m in target.getElementsByClass("Measure")}
+
+    inserted: list[tuple[int, str]] = []
+    for number, figure in sorted(figures.items()):
+        dest = measures.get(number)
+        if dest is None:
             continue
-        events.append((float(measure.offset), figure))
         try:
             symbol = harmony.ChordSymbol(figure)
+            symbol.writeAsChord = False  # 오선 위 심볼로만, 음표로는 넣지 않음
         except Exception:
             continue  # 표기 불가한 심볼은 건너뜀
-        dest = target_measures.get(measure.number)
-        if dest is not None:
-            dest.insert(0, symbol)
-        else:
-            target.insert(measure.offset, symbol)
-    return events
+        dest.insert(0, symbol)
+        inserted.append((number, figure))
+    return inserted
+
+
+def annotate(score) -> list[tuple[int, str]]:
+    """`score` 자체의 화음에서 코드를 뽑아 그 위에 표기한다(in place)."""
+    return _insert(score, _measure_figures(score))
+
+
+def annotate_from(target_score, source_score) -> list[tuple[int, str]]:
+    """`source_score`(반주)의 화음에서 코드를 뽑아 `target_score`(멜로디) 위에 얹는다.
+
+    보컬 멜로디는 단선율이라 코드가 안 나오므로, 분리된 반주에서 코드를 뽑아
+    같은 마디 번호의 멜로디 위에 표기한다(오선엔 반영 안 함).
+    """
+    return _insert(target_score, _measure_figures(source_score))

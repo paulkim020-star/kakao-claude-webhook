@@ -58,7 +58,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "-c", "--chords",
         action="store_true",
-        help="마디별 코드 심볼(C, Am, G7...)을 추정해 악보에 표기. 반주가 포함된 파트에 유효.",
+        help="코드 심볼(C, Am, G7...)을 악보 위에 표기(음표엔 반영 안 함). 보컬 스템이면 반주에서 코드를 뽑는다.",
+    )
+    p.add_argument(
+        "--no-tidy",
+        action="store_true",
+        help="보컬 정리(음역대 제한/짧은 잔음 제거)를 끈다. 기본은 보컬 스템일 때 자동 적용.",
     )
     return p
 
@@ -73,6 +78,7 @@ def main(argv: list[str] | None = None) -> int:
             make_pdf=not args.no_pdf, chords=args.chords,
             engine=args.engine, composer=args.composer,
             time_signature=args.time, transpose=args.transpose,
+            tidy=(False if args.no_tidy else None),
         )
     except (RuntimeError, FileNotFoundError, ValueError) as e:
         print(f"[에러] {e}", file=sys.stderr)

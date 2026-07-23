@@ -147,8 +147,13 @@ def midi_to_musicxml(
     time_signature: str = "auto",
     transpose: str = "off",
     with_chords: bool = False,
+    chord_source_midi: str | Path | None = None,
 ) -> Path:
-    """MIDI 를 정리(+선택적 코드 심볼)해 MusicXML 로 저장하고 경로를 돌려준다."""
+    """MIDI 를 정리(+선택적 코드 심볼)해 MusicXML 로 저장하고 경로를 돌려준다.
+
+    `chord_source_midi` 를 주면 그 MIDI(예: 분리된 반주)의 화음에서 코드를 뽑아
+    멜로디 악보 위에 얹는다(오선엔 반영 안 함). 없으면 멜로디 자체에서 뽑는다.
+    """
     midi_path = Path(midi_path)
     score = midi_to_score(
         midi_path,
@@ -159,7 +164,17 @@ def midi_to_musicxml(
     if with_chords:
         from . import chords
 
-        chords.annotate(score)
+        if chord_source_midi is not None:
+            # 반주를 멜로디와 같은 조건으로 정리해 마디를 맞춘 뒤 코드만 추출
+            source = midi_to_score(
+                chord_source_midi,
+                detect_key=False,
+                time_signature=time_signature,
+                transpose=transpose,
+            )
+            chords.annotate_from(score, source)
+        else:
+            chords.annotate(score)
     return write_musicxml(score, dst_dir, midi_path.stem)
 
 

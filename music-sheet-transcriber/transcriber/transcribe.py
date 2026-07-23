@@ -33,6 +33,7 @@ def to_midi(
     *,
     engine: str = BASIC_PITCH,
     composer: str = "composer1",
+    tidy: bool = False,
 ) -> Path:
     """`audio_path` 를 채보해 MIDI 파일 경로를 돌려준다.
 
@@ -40,12 +41,14 @@ def to_midi(
         engine: ``basic-pitch`` 또는 ``pop2piano``.
         composer: pop2piano 스타일 프리셋(``composer1``..``composer21``). 그 외
             엔진에서는 무시된다.
+        tidy: basic-pitch 에서 사람 목소리에 맞춰 정리(음역대 제한 + 짧은 잔음
+            제거)한다. 보컬 멜로디를 깔끔하게 뽑을 때 쓴다.
     """
     dst_dir = Path(dst_dir)
     dst_dir.mkdir(parents=True, exist_ok=True)
 
     if engine == BASIC_PITCH:
-        return _basic_pitch(Path(audio_path), dst_dir)
+        return _basic_pitch(Path(audio_path), dst_dir, tidy=tidy)
     if engine == POP2PIANO:
         return _pop2piano(Path(audio_path), dst_dir, composer=composer)
     if engine == PIANO:
@@ -53,7 +56,7 @@ def to_midi(
     raise ValueError(f"알 수 없는 엔진: {engine!r} (가능: {ENGINES})")
 
 
-def _basic_pitch(audio_path: Path, dst_dir: Path) -> Path:
+def _basic_pitch(audio_path: Path, dst_dir: Path, *, tidy: bool = False) -> Path:
     try:
         from basic_pitch.inference import predict
     except ImportError as e:  # pragma: no cover - 설치 안내용
@@ -61,8 +64,21 @@ def _basic_pitch(audio_path: Path, dst_dir: Path) -> Path:
             "basic-pitch 가 설치되어 있지 않습니다: `pip install basic-pitch`."
         ) from e
 
+    # 사람 목소리 정리: 음역대(약 80~1100Hz) 제한 + 짧은 잔음(비브라토/숨소리)
+    # 제거 + 문턱값 상향으로 멜로디 라인만 남긴다.
+    kwargs = (
+        dict(
+            onset_threshold=0.6,
+            frame_threshold=0.4,
+            minimum_note_length=130,
+            minimum_frequency=80,
+            maximum_frequency=1100,
+        )
+        if tidy
+        else {}
+    )
     # 모델 경로는 predict 가 사용 가능한 백엔드(TensorFlow 등)에서 자동 선택한다.
-    _model_output, midi_data, _note_events = predict(str(audio_path))
+    _model_output, midi_data, _note_events = predict(str(audio_path), **kwargs)
     dst = dst_dir / f"{audio_path.stem}.mid"
     midi_data.write(str(dst))
     return dst

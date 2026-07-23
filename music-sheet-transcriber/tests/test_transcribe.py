@@ -30,13 +30,15 @@ def _patch_pipeline(monkeypatch, calls, tmp_path):
         p.write_bytes(b"")
         return p
 
-    def fake_to_midi(audio_path, dst, engine="basic-pitch", composer="composer1"):
+    def fake_to_midi(audio_path, dst, engine="basic-pitch", composer="composer1", tidy=False):
         calls["engine"] = engine
+        calls["tidy"] = tidy
         p = Path(dst) / "a.mid"
         p.write_bytes(b"")
         return p
 
-    def fake_xml(midi, dst, with_chords=False, time_signature="auto", transpose="off"):
+    def fake_xml(midi, dst, with_chords=False, time_signature="auto", transpose="off",
+                 chord_source_midi=None):
         p = Path(dst) / "a.musicxml"
         p.write_text("x")
         return p
@@ -73,6 +75,7 @@ def test_basic_pitch_separates_and_uses_default_sr(monkeypatch, tmp_path):
     assert calls["separated"] == "vocals"  # 스템 분리 수행
     assert calls["sr"] == audio.TARGET_SR
     assert calls["engine"] == "basic-pitch"
+    assert calls["tidy"] is True  # 보컬 스템은 정리 자동 적용
 
 
 def test_piano_engine_skips_separation(monkeypatch, tmp_path):

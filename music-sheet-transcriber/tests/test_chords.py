@@ -37,3 +37,28 @@ def test_annotate_inserts_chord_symbols():
     assert len(events) == 5
     inserted = list(score.recurse().getElementsByClass(harmony.ChordSymbol))
     assert len(inserted) == 5
+
+
+def test_annotate_from_overlays_source_chords_on_melody():
+    """반주(source)의 코드를 멜로디(target) 위에 얹되, 음표는 건드리지 않는다."""
+    from music21 import stream, note, harmony
+
+    # 멜로디(target): 마디마다 단선율 음표
+    melody = stream.Stream()
+    for name in ["C5", "D5", "E5", "F5", "G5"]:
+        melody.append(note.Note(name, quarterLength=4))
+    melody = melody.makeMeasures()
+
+    source = _block_chords_score()  # C-F-G-Am-G7 반주
+    melody_notes_before = len(list(melody.recurse().getElementsByClass(note.Note)))
+
+    events = chords.annotate_from(melody, source)
+
+    figures = [fig for _num, fig in events]
+    assert figures == ["C", "F", "G", "Am", "G7"]
+    # 코드 심볼 5개가 얹혔고
+    assert len(list(melody.recurse().getElementsByClass(harmony.ChordSymbol))) == 5
+    # 멜로디의 실제 음표(note.Note)는 그대로 - 오선엔 코드가 반영 안 됨
+    assert len(list(melody.recurse().getElementsByClass(note.Note))) == melody_notes_before
+    for cs in melody.recurse().getElementsByClass(harmony.ChordSymbol):
+        assert cs.writeAsChord is False

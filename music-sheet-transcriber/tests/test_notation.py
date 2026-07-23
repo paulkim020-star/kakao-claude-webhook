@@ -147,6 +147,33 @@ def test_with_chords_adds_harmony(tmp_path):
     assert "<harmony" in text  # 코드 심볼이 harmony 요소로 렌더링됨
 
 
+def test_chords_from_separate_source_midi(tmp_path):
+    """멜로디는 단선율이라 코드가 안 나오지만, 반주 MIDI 를 주면 그 코드가 얹힌다."""
+    from music21 import stream, note, chord as m21chord
+
+    # 멜로디: 단선율 (코드 정보 없음)
+    mel = stream.Stream()
+    for name in ["C5", "E5", "G5", "C6"]:
+        mel.append(note.Note(name, quarterLength=4))
+    melody_midi = tmp_path / "vocals.mid"
+    mel.write("midi", fp=str(melody_midi))
+
+    # 반주: 화음 (여기서 코드가 나옴)
+    acc = stream.Stream()
+    for pcs in [["C4", "E4", "G4"], ["G4", "B4", "D5"]]:
+        acc.append(m21chord.Chord(pcs, quarterLength=4))
+    acc_midi = tmp_path / "no_vocals.mid"
+    acc.write("midi", fp=str(acc_midi))
+
+    xml = notation.midi_to_musicxml(
+        melody_midi, tmp_path, with_chords=True, chord_source_midi=acc_midi
+    )
+
+    text = xml.read_text(encoding="utf-8")
+    assert "<harmony" in text  # 반주에서 뽑은 코드가 멜로디 악보에 얹힘
+    assert "<root-step>C</root-step>" in text
+
+
 def test_musicxml_to_svg_renders():
     verovio = pytest.importorskip("verovio")  # noqa: F841
 
