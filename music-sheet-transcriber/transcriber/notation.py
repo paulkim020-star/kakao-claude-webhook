@@ -83,12 +83,68 @@ def _safe_mode(score) -> str:
         return "major"
 
 
+def merge_repeated_notes(score):
+    """이어지는(붙어있는) 같은 음정의 음표들을 하나의 긴 음표로 합친다.
+
+    예: 같은 음정의 8분음표 3개(붙어있음) → 점4분음표 1개. 가사가 없다는 전제
+    이므로 재발음/타이 구분 없이 합친다. 사이에 쉼표나 다른 음정이 오면 합치지
+    않는다. 마디를 다시 만들어 바(bar) 걸침은 타이로 처리한다.
+
+    (가사를 넣는다면 음절이 바뀌는 지점은 합치면 안 되므로, 그땐 이 기능을 꺼야
+    한다.)
+    """
+    from music21 import chord as m21chord
+    from music21 import key as m21key
+    from music21 import meter, note, stream
+
+    part = score.parts[0] if score.parts else score
+    flat = part.flatten()
+
+    time_sig = next(iter(flat.getElementsByClass(meter.TimeSignature)), None)
+    key_sig = next(iter(flat.getElementsByClass(m21key.Key)), None)
+
+    # (종류, 값, 길이) 목록으로 병합: 같은 음정 연속 -> 길이 합산
+    merged: list[list] = []
+    for el in flat.getElementsByClass((note.Note, note.Rest, m21chord.Chord)):
+        if isinstance(el, note.Note):
+            if merged and merged[-1][0] == "note" and merged[-1][1] == el.nameWithOctave:
+                merged[-1][2] += el.quarterLength
+            else:
+                merged.append(["note", el.nameWithOctave, el.quarterLength])
+        elif isinstance(el, note.Rest):
+            if merged and merged[-1][0] == "rest":
+                merged[-1][2] += el.quarterLength
+            else:
+                merged.append(["rest", None, el.quarterLength])
+        else:  # 화음은 합치지 않고 그대로 둠
+            merged.append(["chord", [p.nameWithOctave for p in el.pitches], el.quarterLength])
+
+    rebuilt = stream.Part()
+    if key_sig is not None:
+        rebuilt.append(m21key.Key(key_sig.tonic.name, key_sig.mode))
+    if time_sig is not None:
+        rebuilt.append(meter.TimeSignature(time_sig.ratioString))
+    for kind, value, ql in merged:
+        if kind == "note":
+            rebuilt.append(note.Note(value, quarterLength=ql))
+        elif kind == "rest":
+            rebuilt.append(note.Rest(quarterLength=ql))
+        else:
+            rebuilt.append(m21chord.Chord(value, quarterLength=ql))
+
+    rebuilt.makeNotation(inPlace=True)  # 마디 재구성 + 바 걸침 타이 처리
+    new_score = stream.Score()
+    new_score.append(rebuilt)
+    return new_score
+
+
 def midi_to_score(
     midi_path: str | Path,
     *,
     detect_key: bool = True,
     time_signature: str = "auto",
     transpose: str = "off",
+    merge_repeats: bool = False,
 ):
     """MIDI 를 읽어 가독성을 높인 music21 Score 를 돌려준다.
 
@@ -116,6 +172,9 @@ def midi_to_score(
         for existing in list(part.recurse().getElementsByClass(meter.TimeSignature)):
             part.remove(existing, recurse=True)
         part.insert(0, meter.TimeSignature(time_signature))
+
+    if merge_repeats:
+        score = merge_repeated_notes(score)  # 같은 음 연속을 하나로 합침
 
     if transpose and transpose != "off":
         score = _apply_transpose(score, transpose)  # 전조된 새 Score 로 교체
@@ -146,6 +205,7 @@ def midi_to_musicxml(
     detect_key: bool = True,
     time_signature: str = "auto",
     transpose: str = "off",
+    merge_repeats: bool = False,
     with_chords: bool = False,
     chord_source_midi: str | Path | None = None,
 ) -> Path:
@@ -160,6 +220,7 @@ def midi_to_musicxml(
         detect_key=detect_key,
         time_signature=time_signature,
         transpose=transpose,
+        merge_repeats=merge_repeats,
     )
     if with_chords:
         from . import chords

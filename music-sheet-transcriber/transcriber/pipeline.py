@@ -30,6 +30,7 @@ def run(
     time_signature: str = "auto",
     transpose: str = "off",
     tidy: bool | None = None,
+    merge_repeats: bool = False,
 ) -> Result:
     """`src` 오디오를 채보한다.
 
@@ -87,7 +88,7 @@ def run(
 
     musicxml = notation.midi_to_musicxml(
         midi, out_dir, with_chords=chords, chord_source_midi=chord_source_midi,
-        time_signature=time_signature, transpose=transpose,
+        time_signature=time_signature, transpose=transpose, merge_repeats=merge_repeats,
     )
 
     pdf = None

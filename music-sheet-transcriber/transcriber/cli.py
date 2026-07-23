@@ -65,6 +65,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="보컬 정리(음역대 제한/짧은 잔음 제거)를 끈다. 기본은 보컬 스템일 때 자동 적용.",
     )
+    p.add_argument(
+        "--merge",
+        action="store_true",
+        help="이어지는 같은 음정의 음표들을 하나의 긴 음표로 합쳐 악보를 단순화한다(가사 없을 때 유용).",
+    )
     return p
 
 
@@ -78,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
             make_pdf=not args.no_pdf, chords=args.chords,
             engine=args.engine, composer=args.composer,
             time_signature=args.time, transpose=args.transpose,
-            tidy=(False if args.no_tidy else None),
+            tidy=(False if args.no_tidy else None), merge_repeats=args.merge,
         )
     except (RuntimeError, FileNotFoundError, ValueError) as e:
         print(f"[에러] {e}", file=sys.stderr)

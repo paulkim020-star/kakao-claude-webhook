@@ -74,6 +74,9 @@ python -m transcriber.cli 피아노연주.mp3 --engine piano
 # 보컬 멜로디(자동 정리) + 반주에서 뽑은 코드 = 기타용 리드시트
 python -m transcriber.cli 노래.mp3 --stem vocals --chords
 
+# 같은 음 연속을 하나로 합쳐 더 단순하게 (가사 없을 때)
+python -m transcriber.cli 노래.mp3 --stem vocals --chords --merge
+
 # 조표가 복잡한 곡을 읽기 쉬운 조(C장조/a단조)로 전조
 python -m transcriber.cli 노래.mp3 --transpose easy
 
@@ -97,6 +100,7 @@ python -m transcriber.cli 노래.mp3 --no-pdf
 | `--transpose` | 전조/키 조정. `off`(기본)·`easy`(장조→C, 단조→a단조)·`+2`/`-3`(반음 올림/내림) |
 | `-c, --chords` | 코드 심볼(C, Am, G7…)을 **악보 위에** 표기(음표엔 반영 안 함, 기타 반주용). 보컬 스템이면 분리된 반주에서 코드를 뽑는다 |
 | `--no-tidy` | 보컬 정리(음역대 제한/짧은 잔음 제거)를 끈다. 기본은 보컬 스템일 때 자동 |
+| `--merge` | 이어지는 같은 음정의 음표를 하나의 긴 음표로 합쳐 단순화 (가사 없을 때 유용) |
 | `--no-pdf` | PDF 렌더링 생략, MusicXML 까지만 생성 |
 
 산출물은 `out/` 에 MIDI, MusicXML, PDF 로 쌓입니다. 악보는 조성을 자동 추정해

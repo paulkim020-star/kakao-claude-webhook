@@ -147,6 +147,45 @@ def test_with_chords_adds_harmony(tmp_path):
     assert "<harmony" in text  # 코드 심볼이 harmony 요소로 렌더링됨
 
 
+def test_merge_repeated_notes_combines_same_pitch():
+    from music21 import stream, note, meter
+
+    part = stream.Part()
+    part.append(meter.TimeSignature("4/4"))
+    # C·C·C(각 0.5) → 합쳐서 1.5, D(1.0), E·E(각 0.5) → 1.0
+    for name, ql in [("C5", 0.5), ("C5", 0.5), ("C5", 0.5),
+                     ("D5", 1.0), ("E5", 0.5), ("E5", 0.5)]:
+        part.append(note.Note(name, quarterLength=ql))
+    score = stream.Score()
+    score.append(part)
+
+    merged = notation.merge_repeated_notes(score)
+
+    notes = list(merged.recurse().getElementsByClass(note.Note))
+    assert [n.nameWithOctave for n in notes] == ["C5", "D5", "E5"]
+    assert notes[0].quarterLength == 1.5  # 같은 음 3개가 하나로
+    assert notes[1].quarterLength == 1.0
+    assert notes[2].quarterLength == 1.0
+
+
+def test_merge_repeats_keeps_rest_separated():
+    """사이에 쉼표가 있으면 같은 음이라도 합치지 않는다."""
+    from music21 import stream, note, meter
+
+    part = stream.Part()
+    part.append(meter.TimeSignature("4/4"))
+    part.append(note.Note("C5", quarterLength=1.0))
+    part.append(note.Rest(quarterLength=1.0))
+    part.append(note.Note("C5", quarterLength=1.0))
+    score = stream.Score()
+    score.append(part)
+
+    merged = notation.merge_repeated_notes(score)
+
+    notes = list(merged.recurse().getElementsByClass(note.Note))
+    assert len(notes) == 2  # 쉼표로 끊겨 합쳐지지 않음
+
+
 def test_chords_from_separate_source_midi(tmp_path):
     """멜로디는 단선율이라 코드가 안 나오지만, 반주 MIDI 를 주면 그 코드가 얹힌다."""
     from music21 import stream, note, chord as m21chord
