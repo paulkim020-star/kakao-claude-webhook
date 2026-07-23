@@ -180,7 +180,10 @@ def musicxml_to_svg(musicxml_path: str | Path) -> list[str]:
     toolkit = verovio.toolkit(False)
     toolkit.setResourcePath(os.path.join(os.path.dirname(verovio.__file__), "data"))
     toolkit.setOptions({"adjustPageHeight": True, "scale": 40, "pageWidth": 2100})
-    if not toolkit.loadFile(str(musicxml_path)):
+    # 파일 경로를 verovio 에 직접 넘기면 한글/유니코드 경로(특히 Windows)에서
+    # 열지 못한다. Python 으로 내용을 읽어 문자열로 전달한다.
+    xml_data = Path(musicxml_path).read_text(encoding="utf-8")
+    if not toolkit.loadData(xml_data):
         raise RuntimeError("verovio 가 MusicXML 을 불러오지 못했습니다.")
     return [toolkit.renderToSVG(i) for i in range(1, toolkit.getPageCount() + 1)]
 
