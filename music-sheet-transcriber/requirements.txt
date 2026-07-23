@@ -1,0 +1,24 @@
+# 채보 파이프라인 의존성.
+# 주의: basic-pitch, demucs 는 torch/tensorflow 를 끌어와 설치가 무겁다(수 GB).
+
+# resampy(basic-pitch 의존)가 pkg_resources 를 import 하는데, setuptools 81
+# (2026-02)부터 pkg_resources 가 제거됨 -> 81 미만으로 고정해야 basic-pitch 가
+# import 된다. (setuptools 를 최신으로 업그레이드하지 말 것.)
+setuptools<81
+
+basic-pitch>=0.3        # 오디오 → MIDI (Spotify)
+demucs>=4.0             # 스템 분리 (Meta) - 풀 믹스 곡에 권장
+music21>=9.1            # MIDI → MusicXML, 악보 정리, 코드 인식
+verovio>=4.0           # MusicXML → SVG (웹 악보 미리보기, MuseScore 불필요)
+librosa>=0.10          # 박자(beat) 추적 - --beats (basic-pitch 가 이미 끌어옴)
+pretty_midi>=0.2       # 박자 정렬용 MIDI 파싱 (basic-pitch 가 이미 끌어옴)
+
+# 웹 업로드 UI
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9  # 파일 업로드 폼 파싱
+jinja2>=3.1
+
+# 시스템 의존성 (pip 아님, 별도 설치 필요):
+#   - ffmpeg   : mp3/mp4 디코딩
+#   - MuseScore: MusicXML → PDF 렌더링
