@@ -89,6 +89,20 @@ python -m transcriber.cli 노래.mp3 --engine pop2piano
 python -m transcriber.cli 노래.mp3 --stem vocals --transpose +2
 ```
 
+## 문제 해결
+
+- **`ModuleNotFoundError: No module named 'pkg_resources'`** — setuptools 81
+  (2026-02)부터 `pkg_resources` 가 제거돼서 `resampy`(basic-pitch 의존)가 못
+  불러오는 경우입니다. setuptools 를 최신으로 올리지 말고 아래로 되돌리세요:
+  ```powershell
+  .venv\Scripts\python.exe -m pip install "setuptools<81"
+  ```
+  (`requirements.txt` 에 이미 `setuptools<81` 로 고정돼 있습니다.)
+
+- **`pkgutil has no attribute 'ImpImporter'` / numpy 빌드 실패** — Python 이
+  너무 최신(3.13+)일 때입니다. **Python 3.11** 로 가상환경을 만드세요
+  (`py -3.11 -m venv .venv`).
+
 ## 정리
 
 이렇게 해두면 **코드 + 모델 + 패키지 캐시 + 가상환경**이 전부 D:에 모여,
