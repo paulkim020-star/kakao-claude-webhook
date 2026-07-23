@@ -86,9 +86,13 @@ def run(
                 accompaniment, out_dir, engine=transcribe.BASIC_PITCH
             )
 
+    # 보컬 멜로디 스템은 단선율(최고음 한 줄)로 축약해 멜로디 악보로 만든다.
+    melody_only = stem == "vocals"
+
     musicxml = notation.midi_to_musicxml(
         midi, out_dir, with_chords=chords, chord_source_midi=chord_source_midi,
-        time_signature=time_signature, transpose=transpose, merge_repeats=merge_repeats,
+        time_signature=time_signature, transpose=transpose,
+        merge_repeats=merge_repeats, melody_only=melody_only,
     )
 
     pdf = None

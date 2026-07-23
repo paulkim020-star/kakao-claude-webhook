@@ -83,6 +83,46 @@ def _safe_mode(score) -> str:
         return "major"
 
 
+def to_monophonic(score):
+    """겹치는 음 중 가장 높은 음만 남겨 단선율(멜로디 한 줄)로 만든다.
+
+    basic-pitch 는 보컬에서도 배음/화음처럼 여러 음을 동시에 잡는다. 이를 매
+    순간 최고음 하나로 줄여 노래 따라부르는 멜로디 라인으로 만든다.
+    """
+    from music21 import chord as m21chord
+    from music21 import key as m21key
+    from music21 import meter, note, stream
+
+    part = score.parts[0] if score.parts else score
+    flat = part.flatten()
+    time_sig = next(iter(flat.getElementsByClass(meter.TimeSignature)), None)
+    key_sig = next(iter(flat.getElementsByClass(m21key.Key)), None)
+
+    rebuilt = stream.Part()
+    rebuilt.partName = "Melody"
+    if key_sig is not None:
+        rebuilt.append(m21key.Key(key_sig.tonic.name, key_sig.mode))
+    if time_sig is not None:
+        rebuilt.append(meter.TimeSignature(time_sig.ratioString))
+
+    # chordify 로 세로로 합친 뒤 각 슬라이스의 최고음만 취한다.
+    for el in part.chordify().recurse().getElementsByClass(
+        (note.Note, note.Rest, m21chord.Chord)
+    ):
+        if isinstance(el, note.Rest):
+            rebuilt.append(note.Rest(quarterLength=el.quarterLength))
+        elif isinstance(el, note.Note):
+            rebuilt.append(note.Note(el.nameWithOctave, quarterLength=el.quarterLength))
+        else:  # Chord -> 최고음
+            top = max(el.pitches, key=lambda p: p.midi)
+            rebuilt.append(note.Note(top.nameWithOctave, quarterLength=el.quarterLength))
+
+    rebuilt.makeNotation(inPlace=True)
+    new_score = stream.Score()
+    new_score.append(rebuilt)
+    return new_score
+
+
 def merge_repeated_notes(score):
     """이어지는(붙어있는) 같은 음정의 음표들을 하나의 긴 음표로 합친다.
 
@@ -120,6 +160,7 @@ def merge_repeated_notes(score):
             merged.append(["chord", [p.nameWithOctave for p in el.pitches], el.quarterLength])
 
     rebuilt = stream.Part()
+    rebuilt.partName = "Melody"
     if key_sig is not None:
         rebuilt.append(m21key.Key(key_sig.tonic.name, key_sig.mode))
     if time_sig is not None:
@@ -145,6 +186,7 @@ def midi_to_score(
     time_signature: str = "auto",
     transpose: str = "off",
     merge_repeats: bool = False,
+    melody_only: bool = False,
 ):
     """MIDI 를 읽어 가독성을 높인 music21 Score 를 돌려준다.
 
@@ -164,7 +206,12 @@ def midi_to_score(
         raise RuntimeError("music21 이 설치되어 있지 않습니다: `pip install music21`.") from e
 
     score = converter.parse(str(midi_path))
-    score.quantize(inPlace=True)
+    # 단순화(merge) 시엔 8분음표 그리드로 굵게 양자화해 잇단음표 잡음을 없앤다.
+    # 평소엔 16분음표+셋잇단(기본)으로 더 정밀하게.
+    if merge_repeats:
+        score.quantize(quarterLengthDivisors=(2,), inPlace=True)
+    else:
+        score.quantize(inPlace=True)
 
     if time_signature and time_signature != "auto":
         # 강제 지정: 기존(파싱된) 박자표를 제거하고 지정 값으로 교체
@@ -172,6 +219,9 @@ def midi_to_score(
         for existing in list(part.recurse().getElementsByClass(meter.TimeSignature)):
             part.remove(existing, recurse=True)
         part.insert(0, meter.TimeSignature(time_signature))
+
+    if melody_only:
+        score = to_monophonic(score)  # 겹친 음을 최고음 한 줄(멜로디)로 축약
 
     if merge_repeats:
         score = merge_repeated_notes(score)  # 같은 음 연속을 하나로 합침
@@ -206,6 +256,7 @@ def midi_to_musicxml(
     time_signature: str = "auto",
     transpose: str = "off",
     merge_repeats: bool = False,
+    melody_only: bool = False,
     with_chords: bool = False,
     chord_source_midi: str | Path | None = None,
 ) -> Path:
@@ -221,6 +272,7 @@ def midi_to_musicxml(
         time_signature=time_signature,
         transpose=transpose,
         merge_repeats=merge_repeats,
+        melody_only=melody_only,
     )
     if with_chords:
         from . import chords

@@ -147,6 +147,25 @@ def test_with_chords_adds_harmony(tmp_path):
     assert "<harmony" in text  # 코드 심볼이 harmony 요소로 렌더링됨
 
 
+def test_to_monophonic_keeps_top_voice():
+    """겹친 화음은 최고음만 남아 단선율이 된다."""
+    from music21 import stream, note, chord as m21chord, meter
+
+    part = stream.Part()
+    part.append(meter.TimeSignature("4/4"))
+    part.append(m21chord.Chord(["C4", "E4", "G4"], quarterLength=2))  # 최고음 G4
+    part.append(m21chord.Chord(["D4", "F4", "A4"], quarterLength=2))  # 최고음 A4
+    score = stream.Score()
+    score.append(part)
+
+    mono = notation.to_monophonic(score)
+
+    pitches = [n.nameWithOctave for n in mono.recurse().getElementsByClass(note.Note)]
+    chords_left = list(mono.recurse().getElementsByClass(m21chord.Chord))
+    assert pitches == ["G4", "A4"]  # 최고음만
+    assert chords_left == []  # 화음이 남지 않음(단선율)
+
+
 def test_merge_repeated_notes_combines_same_pitch():
     from music21 import stream, note, meter
 

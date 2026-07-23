@@ -70,7 +70,7 @@ def _basic_pitch(audio_path: Path, dst_dir: Path, *, tidy: bool = False) -> Path
         dict(
             onset_threshold=0.6,
             frame_threshold=0.4,
-            minimum_note_length=130,
+            minimum_note_length=200,  # 짧은 잔음(비브라토/숨소리) 강하게 제거
             minimum_frequency=80,
             maximum_frequency=1100,
         )
