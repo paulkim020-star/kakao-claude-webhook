@@ -163,6 +163,31 @@ def midi_to_musicxml(
     return write_musicxml(score, dst_dir, midi_path.stem)
 
 
+def _verovio_resource_path(verovio) -> str:
+    """verovio 폰트 리소스 폴더 경로를 돌려준다.
+
+    verovio(C++)는 한글/유니코드 경로에서 폰트 파일을 읽지 못한다. 설치 경로에
+    비ASCII 문자가 있으면(예: `D:\\음악작업\\...`) 폰트 데이터를 ASCII 임시
+    폴더로 한 번 복사해 그 경로를 리소스 경로로 쓴다.
+    """
+    import os
+    import shutil
+    import tempfile
+
+    data_dir = os.path.join(os.path.dirname(verovio.__file__), "data")
+    if data_dir.isascii():
+        return data_dir
+
+    tmp_root = tempfile.gettempdir()
+    if not tmp_root.isascii():
+        return data_dir  # 임시 폴더도 비ASCII 면 방법이 없음 - 원본 반환
+
+    ascii_dir = os.path.join(tmp_root, "verovio_data")
+    if not os.path.isdir(ascii_dir):
+        shutil.copytree(data_dir, ascii_dir)
+    return ascii_dir
+
+
 def musicxml_to_svg(musicxml_path: str | Path) -> list[str]:
     """MusicXML 을 페이지별 SVG 마크업 리스트로 렌더링한다(verovio).
 
@@ -173,18 +198,19 @@ def musicxml_to_svg(musicxml_path: str | Path) -> list[str]:
     except ImportError as e:  # pragma: no cover - 설치 안내용
         raise RuntimeError("verovio 가 설치되어 있지 않습니다: `pip install verovio`.") from e
 
-    # 폰트/리소스 경로를 명시적으로 지정한다. 자동 탐지는 실행 컨텍스트
-    # (예: 웹 워커 스레드)에 따라 실패해 폰트 로딩 에러가 날 수 있다.
-    import os
-
+    # 폰트/리소스 경로를 명시적으로 지정한다(한글 경로면 ASCII 임시 폴더로 복사).
+    # 자동 탐지는 실행 컨텍스트(웹 워커 스레드 등)에 따라 폰트 로딩이 실패할 수 있다.
     toolkit = verovio.toolkit(False)
-    toolkit.setResourcePath(os.path.join(os.path.dirname(verovio.__file__), "data"))
+    toolkit.setResourcePath(_verovio_resource_path(verovio))
     toolkit.setOptions({"adjustPageHeight": True, "scale": 40, "pageWidth": 2100})
     # 파일 경로를 verovio 에 직접 넘기면 한글/유니코드 경로(특히 Windows)에서
     # 열지 못한다. Python 으로 내용을 읽어 문자열로 전달한다.
     xml_data = Path(musicxml_path).read_text(encoding="utf-8")
     if not toolkit.loadData(xml_data):
-        raise RuntimeError("verovio 가 MusicXML 을 불러오지 못했습니다.")
+        raise RuntimeError(
+            "verovio 가 악보를 렌더링하지 못했습니다. 프로젝트 경로에 한글이 있으면 "
+            "영문 경로로 옮기면 해결될 수 있습니다."
+        )
     return [toolkit.renderToSVG(i) for i in range(1, toolkit.getPageCount() + 1)]
 
 
