@@ -55,16 +55,14 @@ def to_midi(
 
 def _basic_pitch(audio_path: Path, dst_dir: Path) -> Path:
     try:
-        from basic_pitch import ICASSP_2022_MODEL_PATH
         from basic_pitch.inference import predict
     except ImportError as e:  # pragma: no cover - 설치 안내용
         raise RuntimeError(
             "basic-pitch 가 설치되어 있지 않습니다: `pip install basic-pitch`."
         ) from e
 
-    _model_output, midi_data, _note_events = predict(
-        str(audio_path), ICASSP_2022_MODEL_PATH
-    )
+    # 모델 경로는 predict 가 사용 가능한 백엔드(TensorFlow 등)에서 자동 선택한다.
+    _model_output, midi_data, _note_events = predict(str(audio_path))
     dst = dst_dir / f"{audio_path.stem}.mid"
     midi_data.write(str(dst))
     return dst

@@ -201,7 +201,9 @@ def musicxml_to_pdf(musicxml_path: str | Path, dst_dir: str | Path) -> Path:
     dst = dst_dir / f"{musicxml_path.stem}.pdf"
     # MuseScore 는 헤드리스 렌더링 시 가상 디스플레이가 필요할 수 있음(xvfb-run).
     cmd = [mscore, "-o", str(dst), str(musicxml_path)]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace"
+    )
     if proc.returncode != 0:
-        raise RuntimeError(f"MuseScore PDF 렌더링 실패:\n{proc.stderr.strip()}")
+        raise RuntimeError(f"MuseScore PDF 렌더링 실패:\n{(proc.stderr or '').strip()}")
     return dst

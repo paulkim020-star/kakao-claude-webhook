@@ -32,11 +32,13 @@ def separate(src_wav: str | Path, dst_dir: str | Path, stem: str = "vocals") -> 
         "-o", str(dst_dir),
         str(src_wav),
     ]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace"
+    )
     if proc.returncode != 0:
         raise RuntimeError(
             "Demucs 실행 실패 (설치 확인: `pip install demucs`):\n"
-            + proc.stderr.strip()
+            + (proc.stderr or "").strip()
         )
 
     # demucs 출력 구조: <dst>/<model>/<track>/<stem>.wav

@@ -43,7 +43,10 @@ def to_wav(src: str | Path, dst_dir: str | Path, sample_rate: int = TARGET_SR) -
         "-ar", str(sample_rate),
         str(dst),
     ]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    # 한국어 Windows(cp949)에서도 ffmpeg 의 UTF-8 출력을 깨짐 없이 읽도록 지정
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace"
+    )
     if proc.returncode != 0:
-        raise RuntimeError(f"ffmpeg 변환 실패:\n{proc.stderr.strip()}")
+        raise RuntimeError(f"ffmpeg 변환 실패:\n{(proc.stderr or '').strip()}")
     return dst
