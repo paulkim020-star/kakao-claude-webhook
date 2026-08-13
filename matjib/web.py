@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from matjib import data, engine
@@ -18,6 +18,44 @@ router = APIRouter(prefix="/matjib")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["CATEGORIES"] = data.CATEGORIES
 templates.env.globals["PRICE_LABELS"] = data.PRICE_LABELS
+# 디자인 시안의 Material Symbols 아이콘 / 사진 대체용 카테고리 그라데이션
+templates.env.globals["CATEGORY_ICONS"] = {
+    "한식": "restaurant", "중식": "soup_kitchen", "일식": "ramen_dining",
+    "양식": "lunch_dining", "아시안": "local_dining",
+    "카페·디저트": "bakery_dining", "술집·바": "local_bar",
+}
+templates.env.globals["CATEGORY_GRADIENTS"] = {
+    "한식": "linear-gradient(135deg, #1a2b48, #4e5f7e)",
+    "중식": "linear-gradient(135deg, #7a1f1f, #b5484d)",
+    "일식": "linear-gradient(135deg, #24344d, #5b7897)",
+    "양식": "linear-gradient(135deg, #8a4b21, #c98a4b)",
+    "아시안": "linear-gradient(135deg, #2f5d3a, #6da177)",
+    "카페·디저트": "linear-gradient(135deg, #6b4f3a, #a98a6d)",
+    "술집·바": "linear-gradient(135deg, #3a2b52, #7a5f9e)",
+}
+# 영업 상태별 색 (디자인 시안의 시맨틱 컬러)
+templates.env.globals["STATUS_STYLE"] = {
+    "open": {"dot": "#00a94c", "text": "#00a94c"},
+    "last_order": {"dot": "#ba1a1a", "text": "#ba1a1a"},
+    "break": {"dot": "#fbbc04", "text": "#f57f17"},
+    "closed": {"dot": "#9aa0a6", "text": "#75777e"},
+}
+
+
+_STATIC_DIR = Path(__file__).parent / "static"
+
+
+@router.get("/static/{filename}")
+def static_file(filename: str):
+    """내장 정적 파일 서빙 (Tailwind Play 스크립트, Material Symbols 폰트).
+
+    CDN(cdn.tailwindcss.com, fonts.gstatic.com)이 막힌 네트워크에서도
+    화면이 깨지지 않도록 저장소에 내장한 파일을 사용.
+    """
+    path = _STATIC_DIR / Path(filename).name  # 경로 탈출 방지
+    if not path.is_file():
+        return RedirectResponse("/matjib")
+    return FileResponse(path)
 
 
 def _now(t: str | None) -> datetime:
@@ -58,7 +96,7 @@ def home(request: Request, t: str | None = None):
     ]
     nearby.sort(key=lambda i: -i["score"]["total"])
     return templates.TemplateResponse(request, "home.html", {
-        "nearby": nearby[:3], "now": now, "t": t,
+        "nearby": nearby[:3], "now": now, "t": t, "active_tab": "home",
     })
 
 
@@ -80,6 +118,7 @@ def search(
         # 미수집 지역: 즉석 수집 후 완성되는 "분석 중" UX (기획안 6.3 / 10장)
         return templates.TemplateResponse(request, "list.html", {
             "region": region, "resolved": None, "items": [], "now": now, "t": t,
+            "active_tab": "search",
             "category": category, "price": price, "open_now": open_now,
             "no_lo_rush": no_lo_rush, "reservable": reservable, "sort": sort,
         })
@@ -108,6 +147,7 @@ def search(
         "region": region, "resolved": resolved, "items": items, "now": now, "t": t,
         "category": category, "price": price, "open_now": open_now,
         "no_lo_rush": no_lo_rush, "reservable": reservable, "sort": sort,
+        "active_tab": "search",
     })
 
 
@@ -122,5 +162,5 @@ def detail(request: Request, rid: int, t: str | None = None):
     return templates.TemplateResponse(request, "detail.html", {
         "r": r, "score": scores[rid],
         "status": engine.open_status(r["hours"], now),
-        "weekdays": weekdays, "now": now, "t": t,
+        "weekdays": weekdays, "now": now, "t": t, "active_tab": "search",
     })

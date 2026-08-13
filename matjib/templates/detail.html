@@ -1,93 +1,192 @@
 {% extends "base.html" %}
+{% block title %}{{ r.name }} - 진짜맛집{% endblock %}
 {% block content %}
 
-<p style="margin-top:4px"><a href="/matjib/search?region={{ r.region }}{% if t %}&t={{ t }}{% endif %}"
-   style="font-size:13px;color:#96908a;font-weight:700">← {{ r.region }} 검색 결과</a></p>
-
-<div class="card">
-  <span class="badge {{ 'g3' if score.grade == '교차검증' else ('g2' if score.grade == '검증' else 'g1') }}">{{ score.badge }}</span>
-  <div class="top" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-    <div>
-      <div style="font-size:21px;font-weight:800">{{ r.name }}</div>
-      <div class="muted" style="margin-top:4px">{{ r.category }} · {{ r.sub_category }} ·
-        {{ PRICE_LABELS[r.price_tier] }} · ⭐ {{ r.signals.rating.avg }} ({{ r.signals.rating.review_count }})</div>
+<!-- 히어로: 실데이터 연동 전이라 카테고리 그라데이션 (사진 대체) -->
+<section class="relative w-full h-[280px] md:rounded-b-xl overflow-hidden shadow-sm"
+         style="background: {{ CATEGORY_GRADIENTS[r.category] }}">
+  <span class="material-symbols-outlined absolute right-6 top-10 text-white/25 text-[140px]">{{ CATEGORY_ICONS[r.category] }}</span>
+  <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+  <a href="/matjib/search?region={{ r.region }}{% if t %}&t={{ t }}{% endif %}"
+     class="absolute top-4 left-4 p-2 bg-black/30 backdrop-blur-md rounded-full text-white hover:bg-black/50 transition-colors">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div class="absolute bottom-0 left-0 w-full p-container-margin text-white">
+    <div class="flex items-center gap-sm mb-3 flex-wrap">
+      {% if score.grade == "교차검증" %}
+        <span class="inline-flex items-center gap-1 bg-primary text-on-primary px-3 py-1 rounded-full text-label-sm border border-white/10 backdrop-blur-md">
+          <span class="text-[#FFD700]">🏆</span> 교차검증 맛집</span>
+      {% elif score.grade == "검증" %}
+        <span class="inline-flex items-center gap-1 bg-[#E8F5E9] text-[#005321] px-3 py-1 rounded-full text-label-sm backdrop-blur-md">✅ 검증 맛집</span>
+      {% else %}
+        <span class="inline-flex items-center gap-1 bg-white/20 text-white px-3 py-1 rounded-full text-label-sm backdrop-blur-md">📌 후보</span>
+      {% endif %}
+      <span class="inline-flex items-center gap-1.5 bg-white/10 text-white px-3 py-1 rounded-full text-label-sm backdrop-blur-md">
+        <span class="w-2 h-2 rounded-full" style="background:{{ STATUS_STYLE[status.code].dot }}; box-shadow:0 0 8px {{ STATUS_STYLE[status.code].dot }}"></span>
+        {{ status.label[2:] }}</span>
     </div>
-    <div class="total" style="text-align:right;flex-shrink:0">
-      <b style="font-size:26px;color:#e8442e">{{ score.total }}</b>
-      <span style="display:block;font-size:10.5px;color:#b5afa8">종합점수</span>
-    </div>
+    <h2 class="text-headline-lg-mobile font-bold drop-shadow-md">{{ r.name }}</h2>
+    <p class="text-body-md mt-1 opacity-90">{{ r.sub_category }} · {{ r.region }} ·
+      ⭐ {{ r.signals.rating.avg }} ({{ r.signals.rating.review_count }})</p>
   </div>
-  <div class="statusline" style="font-size:14px">{{ status.label }}</div>
+</section>
+
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter px-container-margin md:px-lg py-lg">
+  <!-- 좌측: 교차검증 리포트 -->
+  <div class="md:col-span-8 flex flex-col gap-lg">
+    <section class="flex flex-col gap-md">
+      <h3 class="text-title-lg text-on-surface">교차검증 리포트</h3>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-sm md:gap-md">
+        <!-- 종합 점수 -->
+        <div class="col-span-2 md:col-span-3 bg-surface rounded-xl p-md ambient-shadow border border-surface-variant">
+          <div class="flex justify-between items-end mb-4">
+            <div class="flex flex-col">
+              <span class="text-label-lg text-on-surface-variant uppercase tracking-wider mb-1">종합점수</span>
+              <span class="text-display-lg text-primary leading-none">{{ score.total }}<span class="text-title-lg text-outline">/100</span></span>
+            </div>
+            <span class="material-symbols-outlined text-secondary text-[40px] fill-icon">verified</span>
+          </div>
+          <div class="w-full bg-surface-container-high h-2.5 rounded-full overflow-hidden">
+            <div class="bg-secondary-container h-full rounded-full" style="width:{{ score.total }}%"></div>
+          </div>
+          <!-- 채널별 백분위 -->
+          <div class="mt-5 space-y-3">
+            {% for ch, label in [("blog", "블로그"), ("youtube", "유튜브"), ("insta", "인스타"), ("rating", "평점")] %}
+            <div class="grid grid-cols-[56px_1fr_40px] gap-3 items-center text-label-lg">
+              <span class="text-on-surface-variant">{{ label }}</span>
+              <div class="bg-surface-container-high h-2 rounded-full overflow-hidden">
+                <div class="h-full rounded-full {{ 'bg-primary' if score.channel_scores[ch] >= 60 else 'bg-outline-variant' }}"
+                     style="width:{{ score.channel_scores[ch] }}%"></div>
+              </div>
+              <b class="text-right text-on-surface">{{ score.channel_scores[ch] }}</b>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="text-label-sm text-outline mt-4 leading-relaxed">채널 점수는 {{ r.region }} 안에서의
+            상대평가(백분위)예요. 60점 이상이면 통과, 성격이 다른 세 채널(블로그·유튜브·인스타)을 모두
+            통과해야 🏆 교차검증 맛집이 됩니다.</p>
+          {% if score.ad_penalty %}
+          <div class="mt-3 bg-error-container text-[#93000a] rounded-lg px-3 py-2.5 text-label-lg">
+            ⚠️ 블로그 후기 중 협찬·광고 표기 비율이 {{ (r.signals.blog.sponsored_ratio * 100)|round|int }}%라
+            광고 페널티(×0.7)가 적용됐어요.</div>
+          {% endif %}
+          {% if score.stale %}
+          <div class="mt-3 bg-surface-container text-on-surface-variant rounded-lg px-3 py-2.5 text-label-lg">
+            🕐 최근 3개월간 새 언급이 없어 신선도 가중(×0.8)이 적용됐어요.</div>
+          {% endif %}
+        </div>
+        <!-- 채널별 근거 카드 -->
+        <a href="https://search.naver.com/search.naver?ssc=tab.blog.all&query={{ (r.region ~ ' ' ~ r.name)|urlencode }}" target="_blank" rel="noopener"
+           class="bg-surface rounded-xl p-md ambient-shadow border border-surface-variant flex flex-col items-center justify-center hover:-translate-y-0.5 transition-transform">
+          <span class="material-symbols-outlined text-[#03C75A] text-[28px] mb-2 fill-icon">edit_document</span>
+          <span class="text-headline-md text-on-surface font-bold">{{ r.signals.blog.review_count_6m }}</span>
+          <span class="text-label-sm text-outline">블로그 후기</span>
+        </a>
+        <a href="https://www.youtube.com/results?search_query={{ (r.region ~ ' ' ~ r.name)|urlencode }}" target="_blank" rel="noopener"
+           class="bg-surface rounded-xl p-md ambient-shadow border border-surface-variant flex flex-col items-center justify-center hover:-translate-y-0.5 transition-transform">
+          <span class="material-symbols-outlined text-[#FF0000] text-[28px] mb-2 fill-icon">play_circle</span>
+          <span class="text-headline-md text-on-surface font-bold">{{ r.signals.youtube.video_count }}</span>
+          <span class="text-label-sm text-outline">유튜브 영상</span>
+        </a>
+        <a href="https://www.instagram.com/explore/tags/{{ r.name|replace(' ', '')|urlencode }}/" target="_blank" rel="noopener"
+           class="col-span-2 md:col-span-1 bg-surface rounded-xl p-md ambient-shadow border border-surface-variant flex flex-col items-center justify-center hover:-translate-y-0.5 transition-transform">
+          <span class="material-symbols-outlined text-[#E1306C] text-[28px] mb-2 fill-icon">photo_camera</span>
+          <span class="text-headline-md text-on-surface font-bold">{{ "{:,}".format(r.signals.insta.hashtag_posts) }}</span>
+          <span class="text-label-sm text-outline">인스타 게시물</span>
+        </a>
+      </div>
+      <p class="text-label-sm text-outline">카드를 누르면 실제 검색 결과로 이동해 근거를 직접 확인할 수 있어요.</p>
+    </section>
+  </div>
+
+  <!-- 우측: 영업시간 / 메뉴 / 방문 정보 -->
+  <div class="md:col-span-4 flex flex-col gap-lg">
+    <section class="bg-surface rounded-xl p-md ambient-shadow border border-surface-variant">
+      <h3 class="text-title-lg text-on-surface mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">schedule</span> 영업시간</h3>
+      <ul class="flex flex-col gap-3 text-body-md text-on-surface-variant">
+        <li class="flex justify-between items-center pb-2 border-b border-surface-container-high">
+          <span class="font-bold text-on-surface flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:{{ STATUS_STYLE[status.code].dot }}"></span> 영업</span>
+          <span class="font-medium text-primary">{{ r.hours.open }} - {{ r.hours.close }}</span>
+        </li>
+        {% if r.hours.break_start %}
+        <li class="flex justify-between items-center text-secondary">
+          <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> 브레이크타임</span>
+          <span>{{ r.hours.break_start }} - {{ r.hours.break_end }}</span>
+        </li>
+        {% endif %}
+        {% if r.hours.last_order %}
+        <li class="flex justify-between items-center text-error">
+          <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-error"></span> 라스트오더</span>
+          <span>{{ r.hours.last_order }}</span>
+        </li>
+        {% endif %}
+        <li class="flex justify-between items-center">
+          <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span> 정기 휴무</span>
+          <span>{% if r.hours.closed_weekdays %}{% for d in r.hours.closed_weekdays %}{{ weekdays[d] }}요일{% if not loop.last %}, {% endif %}{% endfor %}{% else %}연중무휴{% endif %}</span>
+        </li>
+      </ul>
+      <p class="text-label-sm text-outline mt-3">시간 정보가 다른가요?
+        <a href="#" class="text-secondary font-bold">변경 제보하기</a></p>
+    </section>
+
+    <section class="bg-surface rounded-xl p-md ambient-shadow border border-surface-variant">
+      <div class="flex justify-between items-start mb-4">
+        <h3 class="text-title-lg text-on-surface flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">restaurant_menu</span> 대표 메뉴</h3>
+        <div class="bg-surface-container px-2 py-0.5 rounded text-primary font-bold tracking-widest text-[14px]">{{ "₩" * r.price_tier }}</div>
+      </div>
+      <div class="space-y-4">
+        {% for name, price in r.signature %}
+        <div>
+          <div class="flex justify-between items-start">
+            <h4 class="text-label-lg text-on-surface">{{ name }}</h4>
+            <span class="font-bold text-primary whitespace-nowrap ml-4">₩{{ "{:,}".format(price) }}</span>
+          </div>
+        </div>
+        {% if not loop.last %}<div class="w-full h-px bg-surface-container-high"></div>{% endif %}
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="bg-surface rounded-xl p-md ambient-shadow border border-surface-variant">
+      <h3 class="text-title-lg text-on-surface mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">location_on</span> 방문 정보</h3>
+      <p class="text-body-md text-on-surface-variant">{{ r.address }}</p>
+      <p class="text-body-md mt-1"><a href="tel:{{ r.phone }}" class="text-secondary font-bold">{{ r.phone }}</a></p>
+      <a href="https://map.kakao.com/?q={{ (r.region ~ ' ' ~ r.name)|urlencode }}" target="_blank" rel="noopener"
+         class="mt-3 w-full border border-primary text-primary text-label-lg py-2.5 rounded-lg flex items-center
+                justify-center gap-2 hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined text-[18px]">map</span> 카카오맵에서 보기</a>
+    </section>
+  </div>
 </div>
 
-<h2 class="sec">교차검증 리포트</h2>
-<div class="card">
-  <p class="muted">블로그 후기 <b>{{ r.signals.blog.review_count_6m }}건</b> ·
-     유튜브 영상 <b>{{ r.signals.youtube.video_count }}개</b> ·
-     인스타 게시물 <b>{{ "{:,}".format(r.signals.insta.hashtag_posts) }}건</b></p>
-
-  {% for ch, label in [("blog", "블로그"), ("youtube", "유튜브"), ("insta", "인스타"), ("rating", "평점")] %}
-    <div class="bar">
-      <span>{{ label }}</span>
-      <div class="track"><div class="fill {{ 'dim' if score.channel_scores[ch] < 60 }}"
-           style="width:{{ score.channel_scores[ch] }}%"></div></div>
-      <b>{{ score.channel_scores[ch] }}</b>
-    </div>
-  {% endfor %}
-  <p class="muted" style="margin-top:10px">채널 점수는 {{ r.region }} 안에서의 상대평가(백분위)예요.
-    60점 이상이면 "통과"이고, 성격이 다른 세 채널(블로그·유튜브·인스타)을 모두 통과해야 🏆 교차검증 맛집이 됩니다.</p>
-
-  {% if score.ad_penalty %}
-    <div class="notice">⚠️ 블로그 후기 중 협찬·광고 표기 비율이
-      {{ (r.signals.blog.sponsored_ratio * 100)|round|int }}%라 종합점수에 광고 페널티(×0.7)가 적용됐어요.</div>
-  {% endif %}
-  {% if score.stale %}
-    <div class="notice">🕐 최근 3개월간 새 언급이 없어 신선도 가중(×0.8)이 적용됐어요.
-      폐업·인기 하락 가능성을 반영합니다.</div>
-  {% endif %}
-
-  <a class="btn secondary" href="https://search.naver.com/search.naver?ssc=tab.blog.all&query={{ (r.region ~ ' ' ~ r.name)|urlencode }}" target="_blank" rel="noopener">📝 블로그 후기 보러가기</a>
-  <a class="btn secondary" href="https://www.youtube.com/results?search_query={{ (r.region ~ ' ' ~ r.name)|urlencode }}" target="_blank" rel="noopener">▶️ 유튜브 영상 보러가기</a>
-  <a class="btn secondary" href="https://www.instagram.com/explore/tags/{{ r.name|replace(' ', '')|urlencode }}/" target="_blank" rel="noopener">📸 인스타 해시태그 보러가기</a>
+<!-- 하단 고정 예약 바 -->
+<div class="fixed bottom-[72px] left-0 w-full bg-surface/90 backdrop-blur-md border-t border-surface-container
+            px-container-margin py-3 z-40 shadow-[0px_-10px_30px_rgba(3,22,50,0.05)]">
+  <div class="max-w-[1200px] mx-auto flex gap-md">
+    {% if r.reservation.naver_booking_url %}
+    <a href="{{ r.reservation.naver_booking_url }}" target="_blank" rel="noopener"
+       class="flex-1 bg-surface border border-primary text-primary text-label-lg py-3 rounded-lg flex items-center
+              justify-center gap-2 hover:bg-surface-container transition-colors shadow-sm">
+      <span class="material-symbols-outlined text-[20px]">calendar_today</span> 네이버 예약</a>
+    {% endif %}
+    {% if r.reservation.catchtable_url %}
+    <a href="{{ r.reservation.catchtable_url }}" target="_blank" rel="noopener"
+       class="flex-1 bg-secondary-container text-white text-label-lg py-3 rounded-lg flex items-center
+              justify-center gap-2 hover:opacity-90 transition-opacity shadow-md">
+      <span class="material-symbols-outlined text-[20px]">restaurant</span> 캐치테이블</a>
+    {% endif %}
+    {% if not r.reservation.naver_booking_url and not r.reservation.catchtable_url %}
+    <a href="tel:{{ r.phone }}"
+       class="flex-1 bg-secondary-container text-white text-label-lg py-3 rounded-lg flex items-center
+              justify-center gap-2 hover:opacity-90 transition-opacity shadow-md">
+      <span class="material-symbols-outlined text-[20px]">call</span> 전화 문의 (온라인 예약 미지원)</a>
+    {% endif %}
+  </div>
 </div>
-
-<h2 class="sec">영업시간</h2>
-<div class="card">
-  <div class="row"><span class="k">영업</span><span>{{ r.hours.open }} ~ {{ r.hours.close }}</span></div>
-  {% if r.hours.break_start %}
-    <div class="row"><span class="k">브레이크타임</span><span>{{ r.hours.break_start }} ~ {{ r.hours.break_end }}</span></div>
-  {% endif %}
-  {% if r.hours.last_order %}
-    <div class="row"><span class="k">라스트오더</span><span>{{ r.hours.last_order }}</span></div>
-  {% endif %}
-  <div class="row"><span class="k">정기 휴무</span>
-    <span>{% if r.hours.closed_weekdays %}{% for d in r.hours.closed_weekdays %}{{ weekdays[d] }}요일{% if not loop.last %}, {% endif %}{% endfor %}{% else %}연중무휴{% endif %}</span></div>
-  <p class="muted" style="margin-top:8px">시간 정보가 다른가요?
-    <a href="#" style="color:#e8442e;font-weight:700">변경 제보하기</a> (제보로 데이터를 보정해요)</p>
-</div>
-
-<h2 class="sec">예약 · 방문</h2>
-<div class="card">
-  {% if r.reservation.naver_booking_url %}
-    <a class="btn" style="margin-top:0" href="{{ r.reservation.naver_booking_url }}" target="_blank" rel="noopener">네이버예약으로 예약하기</a>
-  {% endif %}
-  {% if r.reservation.catchtable_url %}
-    <a class="btn" {% if not r.reservation.naver_booking_url %}style="margin-top:0"{% endif %}
-       href="{{ r.reservation.catchtable_url }}" target="_blank" rel="noopener">캐치테이블로 예약하기</a>
-  {% endif %}
-  {% if not r.reservation.naver_booking_url and not r.reservation.catchtable_url %}
-    <p class="muted">온라인 예약은 지원하지 않는 곳이에요. 전화로 문의해 보세요.</p>
-  {% endif %}
-  <div class="row" style="margin-top:8px"><span class="k">주소</span><span>{{ r.address }}</span></div>
-  <div class="row"><span class="k">전화</span><span><a href="tel:{{ r.phone }}" style="color:#e8442e;font-weight:700">{{ r.phone }}</a></span></div>
-  <a class="btn secondary" href="https://map.kakao.com/?q={{ (r.region ~ ' ' ~ r.name)|urlencode }}" target="_blank" rel="noopener">🗺️ 카카오맵에서 보기</a>
-</div>
-
-<h2 class="sec">대표 메뉴</h2>
-<div class="card">
-  {% for name, price in r.signature %}
-    <div class="row"><span>{{ name }}</span><span style="font-weight:800;color:#e8442e">{{ "{:,}".format(price) }}원</span></div>
-  {% endfor %}
-</div>
+<div class="h-16"></div>
 
 {% endblock %}
