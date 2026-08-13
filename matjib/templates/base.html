@@ -3,106 +3,142 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>진짜맛집 · 교차검증 맛집찾기</title>
+<title>{% block title %}진짜맛집{% endblock %}</title>
+<!-- 디자인 시안의 디자인 시스템: Tailwind + Material Symbols + Hanken Grotesk -->
+<!-- (Tailwind 스크립트와 아이콘 폰트는 CDN 차단 환경 대비 저장소 내장본 사용) -->
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="/matjib/static/tailwind.js"></script>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "surface-container": "#eceef1", "background": "#f7f9fc",
+          "surface-container-highest": "#e0e3e6", "surface-container-lowest": "#ffffff",
+          "on-surface-variant": "#44474d", "surface-tint": "#4e5f7e",
+          "primary-fixed": "#d7e2ff", "on-tertiary-container": "#00a94c",
+          "surface": "#f7f9fc", "error": "#ba1a1a", "outline": "#75777e",
+          "on-primary": "#ffffff", "on-surface": "#191c1e",
+          "outline-variant": "#c5c6ce", "secondary-container": "#d43f00",
+          "error-container": "#ffdad6", "on-primary-container": "#8293b5",
+          "on-background": "#191c1e", "surface-variant": "#e0e3e6",
+          "on-secondary-container": "#fffbff", "secondary": "#aa3000",
+          "surface-container-high": "#e6e8eb", "primary-container": "#1a2b48",
+          "surface-container-low": "#f2f4f7", "primary": "#031632",
+          "on-secondary": "#ffffff"
+        },
+        "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        "spacing": { "md": "16px", "lg": "24px", "xl": "40px", "gutter": "16px", "xs": "4px",
+                     "container-margin": "20px", "base": "4px", "sm": "8px" },
+        "fontSize": {
+          "headline-lg-mobile": ["26px", { "lineHeight": "32px", "fontWeight": "700" }],
+          "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+          "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+          "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.03em", "fontWeight": "700" }],
+          "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+          "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+          "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }]
+        }
+      }
+    }
+  }
+</script>
 <style>
-  /* 프로토타입 룩: 화이트 + 토마토 레드 포인트, 모바일 우선 */
-  * { box-sizing: border-box; margin: 0; }
-  body { font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-         background: #f6f5f2; color: #29241f; -webkit-font-smoothing: antialiased; }
-  a { color: inherit; text-decoration: none; }
-  .wrap { max-width: 520px; margin: 0 auto; padding: 14px 14px 40px; }
-
-  header.app { display: flex; align-items: baseline; gap: 8px; padding: 10px 2px 14px; }
-  header.app h1 { font-size: 22px; letter-spacing: -.5px; }
-  header.app h1 a { color: #e8442e; }
-  header.app .tag { font-size: 11.5px; color: #96908a; font-weight: 600; }
-
-  .card { background: #fff; border-radius: 16px; padding: 16px;
-          border: 1px solid #ece9e4; box-shadow: 0 1px 4px rgba(40,30,20,.05);
-          margin-top: 12px; }
-  .muted { color: #96908a; font-size: 12.5px; line-height: 1.6; }
-  h2.sec { font-size: 14px; color: #6b645d; margin: 18px 2px 2px; letter-spacing: .5px; }
-
-  /* 검색창 */
-  .searchbar { display: flex; gap: 8px; }
-  .searchbar input[type=text] { flex: 1; padding: 13px 15px; font-size: 15px;
-         border: 1.5px solid #e3ded7; border-radius: 12px; background: #fff; }
-  .searchbar input:focus { outline: none; border-color: #e8442e; }
-  .searchbar button { padding: 0 18px; border: 0; border-radius: 12px; font-size: 15px;
-         font-weight: 800; background: #e8442e; color: #fff; cursor: pointer; }
-
-  /* 칩 (지역/카테고리) */
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .chips a, .chips button { padding: 8px 13px; border-radius: 999px; font-size: 13px;
-         font-weight: 700; background: #fff; border: 1.5px solid #e3ded7; color: #57504a;
-         cursor: pointer; }
-  .chips a:hover, .chips button:hover { border-color: #e8442e; color: #e8442e; }
-  .chips .on { background: #e8442e; border-color: #e8442e; color: #fff; }
-
-  /* 결과 카드 */
-  .shop { display: block; }
-  .shop + .shop { margin-top: 10px; }
-  .shop .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-  .shop .name { font-size: 16.5px; font-weight: 800; }
-  .shop .meta { font-size: 12.5px; color: #96908a; margin-top: 3px; }
-  .shop .total { text-align: right; flex-shrink: 0; }
-  .shop .total b { font-size: 21px; color: #e8442e; }
-  .shop .total span { display: block; font-size: 10.5px; color: #b5afa8; }
-  .badge { display: inline-block; font-size: 11px; font-weight: 800; padding: 3px 8px;
-           border-radius: 6px; margin-bottom: 6px; }
-  .badge.g3 { background: #fff1e6; color: #c2410c; border: 1px solid #fed7aa; }
-  .badge.g2 { background: #ecfdf3; color: #157347; border: 1px solid #bbe7cc; }
-  .badge.g1 { background: #f3f1ee; color: #6b645d; border: 1px solid #e3ded7; }
-  .statusline { font-size: 12.5px; margin-top: 8px; font-weight: 600; }
-
-  /* 필터 바 */
-  .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .filters select { padding: 8px 10px; border-radius: 10px; border: 1.5px solid #e3ded7;
-           font-size: 13px; background: #fff; color: #57504a; }
-  .filters label.ck { display: inline-flex; gap: 5px; align-items: center; font-size: 12.5px;
-           font-weight: 700; color: #57504a; background: #fff; border: 1.5px solid #e3ded7;
-           border-radius: 999px; padding: 8px 12px; cursor: pointer; }
-  .filters button { padding: 8px 14px; border: 0; border-radius: 10px; font-size: 13px;
-           font-weight: 800; background: #29241f; color: #fff; cursor: pointer; }
-
-  /* 채널 점수 바 */
-  .bar { display: grid; grid-template-columns: 62px 1fr 40px; gap: 10px; align-items: center;
-         font-size: 12.5px; margin-top: 9px; }
-  .bar .track { height: 8px; background: #f0ede8; border-radius: 99px; overflow: hidden; }
-  .bar .fill { height: 100%; border-radius: 99px; background: #e8442e; }
-  .bar .fill.dim { background: #d4cec7; }
-  .bar b { text-align: right; font-size: 12px; }
-
-  .btn { display: block; text-align: center; padding: 13px; border-radius: 12px;
-         font-size: 14.5px; font-weight: 800; background: #e8442e; color: #fff; margin-top: 10px; }
-  .btn.secondary { background: #fff; color: #57504a; border: 1.5px solid #e3ded7; }
-  .btn.secondary:hover { border-color: #e8442e; color: #e8442e; }
-
-  .row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0;
-         font-size: 13.5px; border-bottom: 1px dashed #ece9e4; }
-  .row:last-child { border-bottom: 0; }
-  .row .k { color: #96908a; flex-shrink: 0; }
-
-  .notice { background: #fffbea; border: 1px solid #f3e5ab; color: #8a6d1a;
-            border-radius: 12px; padding: 13px 15px; font-size: 13px; line-height: 1.6;
-            margin-top: 12px; }
-  footer { text-align: center; padding: 26px 0 0; }
-  footer .muted { font-size: 11.5px; }
-
-  @media (min-width: 768px) { .wrap { max-width: 640px; } }
+  @font-face {
+    font-family: 'Material Symbols Outlined';
+    font-style: normal;
+    font-weight: 100 700;
+    font-display: block;
+    src: url('/matjib/static/material-symbols-outlined.woff2') format('woff2');
+  }
+  body { font-family: 'Hanken Grotesk', -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal; font-style: normal; line-height: 1;
+    letter-spacing: normal; text-transform: none; display: inline-block;
+    white-space: nowrap; word-wrap: normal; direction: ltr;
+    font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .fill-icon { font-variation-settings: 'FILL' 1; }
+  .ambient-shadow { box-shadow: 0px 4px 20px rgba(3, 22, 50, 0.04); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .bottom-sheet { transform: translateY(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); }
+  .bottom-sheet.open { transform: translateY(0); }
+  .backdrop { opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
 </style>
 </head>
-<body>
-<div class="wrap">
-  <header class="app">
-    <h1><a href="/matjib{% if t %}?t={{ t }}{% endif %}">진짜맛집</a></h1>
-    <span class="tag">인스타 × 유튜브 × 블로그 교차검증</span>
-  </header>
-  {% block content %}{% endblock %}
-  <footer>
-    <p class="muted">프로토타입 v0.1 · 데이터는 목업(가상 상호)입니다<br>
-    기준 시각 {{ now.strftime("%H:%M") }}{% if t %} (데모 시각 고정){% endif %}</p>
-  </footer>
-</div>
+<body class="bg-background text-on-background pb-24 antialiased">
+
+<header class="bg-surface sticky top-0 z-40 w-full">
+  <div class="flex justify-between items-center w-full max-w-[1200px] mx-auto px-container-margin py-md">
+    <a href="/matjib{% if t %}?t={{ t }}{% endif %}"
+       class="text-headline-lg-mobile font-bold text-primary tracking-tight">진짜맛집</a>
+    <div class="flex items-center gap-2">
+      <!-- 데모 시각 (프로토타입 전용): 영업 상태를 원하는 시간대 기준으로 확인 -->
+      <div class="flex items-center gap-1 bg-surface-container-low rounded-full pl-2 pr-1 py-1">
+        <span class="material-symbols-outlined text-[18px] text-outline">schedule</span>
+        <select id="tsel" aria-label="데모 시각"
+                class="bg-transparent border-none text-label-sm text-on-surface-variant focus:ring-0 p-0 pr-5 cursor-pointer">
+          <option value="">현재 시각</option>
+          {% for opt in ["09:00", "12:30", "15:30", "18:30", "20:30", "23:30"] %}
+            <option value="{{ opt }}" {% if t == opt %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <a href="/matjib/search?region=성수동{% if t %}&t={{ t }}{% endif %}" aria-label="검색"
+         class="text-primary hover:bg-surface-container-highest transition-colors rounded-full p-2 flex items-center">
+        <span class="material-symbols-outlined">search</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1200px] mx-auto w-full">
+{% block content %}{% endblock %}
+</main>
+
+<p class="text-center text-label-sm text-outline px-container-margin pt-lg">
+  프로토타입 v0.1 · 데이터는 목업(가상 상호)입니다 · 기준 시각 {{ now.strftime("%H:%M") }}{% if t %} (데모 고정){% endif %}
+</p>
+
+<!-- BottomNavBar: 지도/검색·저장됨·마이페이지는 Phase 2~3 예정 -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2
+            shadow-[0px_-4px_20px_rgba(3,22,50,0.04)] bg-surface-container-lowest rounded-t-xl">
+  <a href="/matjib{% if t %}?t={{ t }}{% endif %}"
+     class="flex flex-col items-center justify-center {% if active_tab == 'home' %}bg-secondary-container text-on-secondary-container rounded-full{% else %}text-on-surface-variant{% endif %} px-4 py-1">
+    <span class="material-symbols-outlined mb-1 {% if active_tab == 'home' %}fill-icon{% endif %}">home</span>
+    <span class="text-label-sm">홈</span>
+  </a>
+  <a href="/matjib/search?region=성수동{% if t %}&t={{ t }}{% endif %}"
+     class="flex flex-col items-center justify-center {% if active_tab == 'search' %}bg-secondary-container text-on-secondary-container rounded-full{% else %}text-on-surface-variant{% endif %} px-4 py-1">
+    <span class="material-symbols-outlined mb-1 {% if active_tab == 'search' %}fill-icon{% endif %}">map</span>
+    <span class="text-label-sm">지도/검색</span>
+  </a>
+  <button onclick="alert('저장(찜) 기능은 다음 단계(Phase 3)에서 제공됩니다.')"
+     class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 opacity-60">
+    <span class="material-symbols-outlined mb-1">bookmark</span>
+    <span class="text-label-sm">저장됨</span>
+  </button>
+  <button onclick="alert('마이페이지는 다음 단계(Phase 3)에서 제공됩니다.')"
+     class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 opacity-60">
+    <span class="material-symbols-outlined mb-1">person</span>
+    <span class="text-label-sm">마이페이지</span>
+  </button>
+</nav>
+
+<script>
+  // 데모 시각 변경: 현재 페이지 URL의 t 파라미터만 교체
+  document.getElementById("tsel").addEventListener("change", (e) => {
+    const u = new URL(location);
+    if (e.target.value) u.searchParams.set("t", e.target.value);
+    else u.searchParams.delete("t");
+    location = u;
+  });
+</script>
+{% block scripts %}{% endblock %}
 </body>
 </html>
