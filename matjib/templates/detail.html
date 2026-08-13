@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+
+<p style="margin-top:4px"><a href="/matjib/search?region={{ r.region }}{% if t %}&t={{ t }}{% endif %}"
+   style="font-size:13px;color:#96908a;font-weight:700">← {{ r.region }} 검색 결과</a></p>
+
+<div class="card">
+  <span class="badge {{ 'g3' if score.grade == '교차검증' else ('g2' if score.grade == '검증' else 'g1') }}">{{ score.badge }}</span>
+  <div class="top" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+    <div>
+      <div style="font-size:21px;font-weight:800">{{ r.name }}</div>
+      <div class="muted" style="margin-top:4px">{{ r.category }} · {{ r.sub_category }} ·
+        {{ PRICE_LABELS[r.price_tier] }} · ⭐ {{ r.signals.rating.avg }} ({{ r.signals.rating.review_count }})</div>
+    </div>
+    <div class="total" style="text-align:right;flex-shrink:0">
+      <b style="font-size:26px;color:#e8442e">{{ score.total }}</b>
+      <span style="display:block;font-size:10.5px;color:#b5afa8">종합점수</span>
+    </div>
+  </div>
+  <div class="statusline" style="font-size:14px">{{ status.label }}</div>
+</div>
+
+<h2 class="sec">교차검증 리포트</h2>
+<div class="card">
+  <p class="muted">블로그 후기 <b>{{ r.signals.blog.review_count_6m }}건</b> ·
+     유튜브 영상 <b>{{ r.signals.youtube.video_count }}개</b> ·
+     인스타 게시물 <b>{{ "{:,}".format(r.signals.insta.hashtag_posts) }}건</b></p>
+
+  {% for ch, label in [("blog", "블로그"), ("youtube", "유튜브"), ("insta", "인스타"), ("rating", "평점")] %}
+    <div class="bar">
+      <span>{{ label }}</span>
+      <div class="track"><div class="fill {{ 'dim' if score.channel_scores[ch] < 60 }}"
+           style="width:{{ score.channel_scores[ch] }}%"></div></div>
+      <b>{{ score.channel_scores[ch] }}</b>
+    </div>
+  {% endfor %}
+  <p class="muted" style="margin-top:10px">채널 점수는 {{ r.region }} 안에서의 상대평가(백분위)예요.
+    60점 이상이면 "통과"이고, 성격이 다른 세 채널(블로그·유튜브·인스타)을 모두 통과해야 🏆 교차검증 맛집이 됩니다.</p>
+
+  {% if score.ad_penalty %}
+    <div class="notice">⚠️ 블로그 후기 중 협찬·광고 표기 비율이
+      {{ (r.signals.blog.sponsored_ratio * 100)|round|int }}%라 종합점수에 광고 페널티(×0.7)가 적용됐어요.</div>
+  {% endif %}
+  {% if score.stale %}
+    <div class="notice">🕐 최근 3개월간 새 언급이 없어 신선도 가중(×0.8)이 적용됐어요.
+      폐업·인기 하락 가능성을 반영합니다.</div>
+  {% endif %}
+
+  <a class="btn secondary" href="https://search.naver.com/search.naver?ssc=tab.blog.all&query={{ (r.region ~ ' ' ~ r.name)|urlencode }}" target="_blank" rel="noopener">📝 블로그 후기 보러가기</a>
+  <a class="btn secondary" href="https://www.youtube.com/results?search_query={{ (r.region ~ ' ' ~ r.name)|urlencode }}" target="_blank" rel="noopener">▶️ 유튜브 영상 보러가기</a>
+  <a class="btn secondary" href="https://www.instagram.com/explore/tags/{{ r.name|replace(' ', '')|urlencode }}/" target="_blank" rel="noopener">📸 인스타 해시태그 보러가기</a>
+</div>
+
+<h2 class="sec">영업시간</h2>
+<div class="card">
+  <div class="row"><span class="k">영업</span><span>{{ r.hours.open }} ~ {{ r.hours.close }}</span></div>
+  {% if r.hours.break_start %}
+    <div class="row"><span class="k">브레이크타임</span><span>{{ r.hours.break_start }} ~ {{ r.hours.break_end }}</span></div>
+  {% endif %}
+  {% if r.hours.last_order %}
+    <div class="row"><span class="k">라스트오더</span><span>{{ r.hours.last_order }}</span></div>
+  {% endif %}
+  <div class="row"><span class="k">정기 휴무</span>
+    <span>{% if r.hours.closed_weekdays %}{% for d in r.hours.closed_weekdays %}{{ weekdays[d] }}요일{% if not loop.last %}, {% endif %}{% endfor %}{% else %}연중무휴{% endif %}</span></div>
+  <p class="muted" style="margin-top:8px">시간 정보가 다른가요?
+    <a href="#" style="color:#e8442e;font-weight:700">변경 제보하기</a> (제보로 데이터를 보정해요)</p>
+</div>
+
+<h2 class="sec">예약 · 방문</h2>
+<div class="card">
+  {% if r.reservation.naver_booking_url %}
+    <a class="btn" style="margin-top:0" href="{{ r.reservation.naver_booking_url }}" target="_blank" rel="noopener">네이버예약으로 예약하기</a>
+  {% endif %}
+  {% if r.reservation.catchtable_url %}
+    <a class="btn" {% if not r.reservation.naver_booking_url %}style="margin-top:0"{% endif %}
+       href="{{ r.reservation.catchtable_url }}" target="_blank" rel="noopener">캐치테이블로 예약하기</a>
+  {% endif %}
+  {% if not r.reservation.naver_booking_url and not r.reservation.catchtable_url %}
+    <p class="muted">온라인 예약은 지원하지 않는 곳이에요. 전화로 문의해 보세요.</p>
+  {% endif %}
+  <div class="row" style="margin-top:8px"><span class="k">주소</span><span>{{ r.address }}</span></div>
+  <div class="row"><span class="k">전화</span><span><a href="tel:{{ r.phone }}" style="color:#e8442e;font-weight:700">{{ r.phone }}</a></span></div>
+  <a class="btn secondary" href="https://map.kakao.com/?q={{ (r.region ~ ' ' ~ r.name)|urlencode }}" target="_blank" rel="noopener">🗺️ 카카오맵에서 보기</a>
+</div>
+
+<h2 class="sec">대표 메뉴</h2>
+<div class="card">
+  {% for name, price in r.signature %}
+    <div class="row"><span>{{ name }}</span><span style="font-weight:800;color:#e8442e">{{ "{:,}".format(price) }}원</span></div>
+  {% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+  <form class="searchbar" action="/matjib/search" method="get">
+    <input type="text" name="region" placeholder="지역·역·동 이름" value="{{ region }}">
+    {% if t %}<input type="hidden" name="t" value="{{ t }}">{% endif %}
+    <button type="submit">검색</button>
+  </form>
+</div>
+
+{% if resolved is none %}
+  <div class="notice">
+    🔍 <b>"{{ region }}"</b> 지역은 아직 수집 전이에요.<br>
+    지금 바로 분석을 시작했어요 — 몇 분 뒤 다시 검색하면 교차검증 결과를 볼 수 있습니다.
+    <span class="muted">(프로토타입에서는 성수동·강남역·홍대만 수집되어 있습니다)</span>
+  </div>
+{% else %}
+
+  <div class="card">
+    <form class="filters" action="/matjib/search" method="get">
+      <input type="hidden" name="region" value="{{ region }}">
+      {% if t %}<input type="hidden" name="t" value="{{ t }}">{% endif %}
+      <select name="category">
+        <option value="">전체 카테고리</option>
+        {% for c in CATEGORIES %}
+          <option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      <select name="price">
+        <option value="">전체 가격대</option>
+        {% for tier, label in PRICE_LABELS.items() %}
+          <option value="{{ tier }}" {% if price == tier|string %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="sort">
+        <option value="score" {% if sort == "score" %}selected{% endif %}>종합점수순</option>
+        <option value="rating" {% if sort == "rating" %}selected{% endif %}>평점순</option>
+        <option value="distance" {% if sort == "distance" %}selected{% endif %}>거리순</option>
+      </select>
+      <label class="ck"><input type="checkbox" name="open_now" value="1" {% if open_now %}checked{% endif %}> 지금 영업 중</label>
+      <label class="ck"><input type="checkbox" name="no_lo_rush" value="1" {% if no_lo_rush %}checked{% endif %}> 라스트오더 여유</label>
+      <label class="ck"><input type="checkbox" name="reservable" value="1" {% if reservable %}checked{% endif %}> 예약 가능</label>
+      <button type="submit">적용</button>
+    </form>
+  </div>
+
+  <h2 class="sec">{{ resolved }} · {{ items|length }}곳</h2>
+
+  {% for i in items %}
+    <a class="card shop" href="/matjib/r/{{ i.id }}{% if t %}?t={{ t }}{% endif %}">
+      <span class="badge {{ 'g3' if i.score.grade == '교차검증' else ('g2' if i.score.grade == '검증' else 'g1') }}">{{ i.score.badge }}</span>
+      <div class="top">
+        <div>
+          <div class="name">{{ i.name }}</div>
+          <div class="meta">{{ i.category }} · {{ i.sub_category }} · {{ PRICE_LABELS[i.price_tier] }}
+            · ⭐ {{ i.signals.rating.avg }} · {{ i.distance }}km
+            {% if i.reservation.naver_booking_url or i.reservation.catchtable_url %} · 📅 예약 가능{% endif %}</div>
+        </div>
+        <div class="total"><b>{{ i.score.total }}</b><span>종합점수</span></div>
+      </div>
+      <div class="statusline">{{ i.status.label }}</div>
+    </a>
+  {% else %}
+    <div class="card"><p class="muted">조건에 맞는 곳이 없어요. 필터를 풀어보세요.</p></div>
+  {% endfor %}
+
+{% endif %}
+
+{% endblock %}

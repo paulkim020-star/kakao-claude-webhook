@@ -34,6 +34,7 @@ from booking import auth as booking_auth
 from booking import web as booking_web
 from booking.db import init_db
 from booking.notify import notification_loop
+from matjib import web as matjib_web
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("kakao-claude-webhook")
@@ -52,6 +53,8 @@ app = FastAPI(title="Kakao <-> Claude Webhook", lifespan=_lifespan)
 app.include_router(booking_web.router)
 app.include_router(booking_auth.router)
 app.include_router(booking_admin.router)
+# 맛집찾기(진짜맛집) 웹 프로토타입 - docs/맛집찾기앱-기획안.md 11장 2단계
+app.include_router(matjib_web.router)
 
 # 예약 웹앱의 공개 URL (배포 주소). 챗봇이 예약 링크를 안내할 때 사용.
 BOOKING_BASE_URL = os.environ.get("BOOKING_BASE_URL", "http://localhost:8000")

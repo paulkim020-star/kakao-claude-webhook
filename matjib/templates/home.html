@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+  <form class="searchbar" action="/matjib/search" method="get">
+    <input type="text" name="region" placeholder="지역·역·동 이름 (예: 성수동, 강남역)" value="성수동">
+    {% if t %}<input type="hidden" name="t" value="{{ t }}">{% endif %}
+    <button type="submit">검색</button>
+  </form>
+  <div class="chips">
+    {% for region in ["성수동", "강남역", "홍대"] %}
+      <a href="/matjib/search?region={{ region }}{% if t %}&t={{ t }}{% endif %}">📍 {{ region }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+<h2 class="sec">카테고리로 찾기</h2>
+<div class="card">
+  <form action="/matjib/search" method="get">
+    <input type="hidden" name="region" value="성수동">
+    {% if t %}<input type="hidden" name="t" value="{{ t }}">{% endif %}
+    <div class="chips" style="margin-top:0">
+      {% for c in CATEGORIES %}
+        <button type="submit" name="category" value="{{ c }}">{{ c }}</button>
+      {% endfor %}
+    </div>
+  </form>
+  <p class="muted" style="margin-top:10px">칩을 누르면 현재 위치(목업: 성수동) 기준으로 검색됩니다.</p>
+</div>
+
+<h2 class="sec">지금 갈 수 있는 근처 교차검증 맛집</h2>
+{% if nearby %}
+  {% for i in nearby %}
+    <a class="card shop" href="/matjib/r/{{ i.id }}{% if t %}?t={{ t }}{% endif %}">
+      <span class="badge {{ 'g3' if i.score.grade == '교차검증' else 'g2' }}">{{ i.score.badge }}</span>
+      <div class="top">
+        <div>
+          <div class="name">{{ i.name }}</div>
+          <div class="meta">{{ i.category }} · {{ i.sub_category }} · {{ PRICE_LABELS[i.price_tier] }}
+            · ⭐ {{ i.signals.rating.avg }} · {{ i.distance }}km</div>
+        </div>
+        <div class="total"><b>{{ i.score.total }}</b><span>종합점수</span></div>
+      </div>
+      <div class="statusline">{{ i.status.label }}</div>
+    </a>
+  {% endfor %}
+{% else %}
+  <div class="card"><p class="muted">지금 이 시간에 갈 수 있는 검증 맛집이 근처에 없어요.
+    데모 시각을 바꿔보세요 (예: <a href="/matjib?t=12:30" style="color:#e8442e;font-weight:700">?t=12:30</a>)</p></div>
+{% endif %}
+
+{% endblock %}

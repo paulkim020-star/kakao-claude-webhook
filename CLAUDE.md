@@ -15,7 +15,10 @@ skill response JSON format (`simpleText`) and returned.
   (`/booking`), 관리자 웹 (`/admin`, HTTP Basic - `ADMIN_PASSWORD` env),
   슬롯 계산/충돌 방지(`engine.py`), 리마인드 알림 스케줄러(`notify.py`).
   기획 배경은 `docs/살롱예약시스템-기획안.md` 참고.
-- `tests/` - pytest 테스트 (슬롯 계산, 예약 충돌, 웹 플로우).
+- `matjib/` - 맛집찾기 앱(진짜맛집) 웹 프로토타입 (`/matjib`). 목업 데이터로
+  교차검증 점수 산식(`engine.py`)과 화면 흐름(홈/리스트/상세)을 검증하는 단계.
+  실제 API 연동 전이며, 기획 배경은 `docs/맛집찾기앱-기획안.md` 참고.
+- `tests/` - pytest 테스트 (슬롯 계산, 예약 충돌, 웹 플로우, 맛집 점수/영업상태).
 - `requirements.txt` - pinned dependencies (fastapi, uvicorn, anthropic, httpx,
   python-dotenv, jinja2, python-multipart).
 
