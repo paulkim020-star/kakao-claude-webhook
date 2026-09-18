@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>자동 채보 · music-sheet-transcriber</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 3rem auto; padding: 0 1rem; color: #222; }
+    h1 { font-size: 1.4rem; }
+    .note { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: .8rem 1rem; font-size: .9rem; }
+    form { margin-top: 1.5rem; display: grid; gap: 1rem; }
+    label { font-weight: 600; display: block; margin-bottom: .3rem; }
+    select, input[type=file] { width: 100%; padding: .4rem; }
+    .row { display: flex; gap: .4rem; align-items: center; }
+    .row label { font-weight: 400; margin: 0; }
+    button { background: #1565c0; color: #fff; border: 0; border-radius: 8px; padding: .7rem 1rem; font-size: 1rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>🎼 오디오 → 악보 자동 채보</h1>
+  <p class="note">
+    풀 믹스 대중가요는 <b>보컬 등 특정 파트만 분리해 채보</b>하는 것을 권장합니다.
+    "원곡 그대로의 완벽한 총보"는 나오지 않으며, 결과는 사람의 후보정을 전제로 합니다.
+  </p>
+
+  <form action="/transcribe" method="post" enctype="multipart/form-data">
+    <div>
+      <label for="file">오디오/영상 파일 (mp3, mp4, m4a, wav)</label>
+      <input id="file" type="file" name="file" accept="audio/*,video/mp4" required>
+    </div>
+
+    <div>
+      <label for="engine">채보 엔진</label>
+      <select id="engine" name="engine">
+        {% for e in engines %}
+        <option value="{{ e }}" {% if e == 'basic-pitch' %}selected{% endif %}>
+          {{ e }}{% if e == 'basic-pitch' %} (범용·파트 채보){% elif e == 'pop2piano' %} (대중가요 → 피아노 커버){% elif e == 'piano' %} (솔로 피아노 고해상도){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="stem">채보할 파트 <small>(basic-pitch 엔진에서만)</small></label>
+      <select id="stem" name="stem">
+        {% for s in stems %}
+        <option value="{{ s }}" {% if s == 'vocals' %}selected{% endif %}>
+          {{ s }}{% if s == 'vocals' %} (보컬 멜로디, 기본){% elif s == 'none' %} (원본 통째로){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="row">
+      <input id="chords" type="checkbox" name="chords" value="true">
+      <label for="chords">코드 심볼 표기 (C, Am, G7 … · 반주 포함 파트에 유효)</label>
+    </div>
+
+    <div>
+      <label for="transpose">전조 / 키 조정</label>
+      <select id="transpose" name="transpose">
+        <option value="off" selected>원조 유지</option>
+        <option value="easy">읽기 쉬운 조 (장조→C, 단조→a단조)</option>
+        <option value="+1">키 +1 (반음 올림)</option>
+        <option value="+2">키 +2</option>
+        <option value="+3">키 +3</option>
+        <option value="-1">키 -1 (반음 내림)</option>
+        <option value="-2">키 -2</option>
+        <option value="-3">키 -3</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <input id="pdf" type="checkbox" name="pdf" value="true">
+      <label for="pdf">PDF 로 렌더링 (MuseScore 설치 필요 · 미체크 시 MusicXML 까지)</label>
+    </div>
+
+    <button type="submit">채보하기</button>
+  </form>
+</body>
+</html>
