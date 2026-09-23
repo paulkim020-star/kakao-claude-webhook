@@ -55,7 +55,15 @@ def static_file(filename: str):
     path = _STATIC_DIR / Path(filename).name  # 경로 탈출 방지
     if not path.is_file():
         return RedirectResponse("/matjib")
-    return FileResponse(path)
+    # .webmanifest는 mimetypes에 없어 명시 (PWA 설치 조건)
+    media_type = "application/manifest+json" if path.suffix == ".webmanifest" else None
+    return FileResponse(path, media_type=media_type)
+
+
+@router.get("/sw.js")
+def service_worker():
+    """PWA 서비스워커. 스코프가 /matjib/ 전체가 되도록 /matjib/sw.js에서 서빙."""
+    return FileResponse(_STATIC_DIR / "sw.js", media_type="application/javascript")
 
 
 def _now(t: str | None) -> datetime:
