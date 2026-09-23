@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}진짜맛집{% endblock %}</title>
+<!-- PWA: 홈 화면에 추가하면 앱처럼 설치됨 -->
+<link rel="manifest" href="/matjib/static/manifest.webmanifest">
+<meta name="theme-color" content="#031632">
+<link rel="icon" type="image/png" sizes="192x192" href="/matjib/static/icon-192.png">
+<link rel="apple-touch-icon" href="/matjib/static/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="진짜맛집">
 <!-- 디자인 시안의 디자인 시스템: Tailwind + Material Symbols + Hanken Grotesk -->
 <!-- (Tailwind 스크립트와 아이콘 폰트는 CDN 차단 환경 대비 저장소 내장본 사용) -->
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -138,6 +146,10 @@
     else u.searchParams.delete("t");
     location = u;
   });
+  // PWA 서비스워커 등록 (설치 조건: https + manifest + SW)
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/matjib/sw.js").catch(() => {});
+  }
 </script>
 {% block scripts %}{% endblock %}
 </body>

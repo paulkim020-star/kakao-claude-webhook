@@ -155,3 +155,22 @@ def test_detail_unknown_id_redirects_home():
 def test_every_mock_restaurant_detail_renders():
     for r in data.RESTAURANTS:
         assert client.get(f"/matjib/r/{r['id']}").status_code == 200
+
+
+# ---------------------------------------------------------------- PWA
+
+def test_pwa_manifest_served_with_correct_type():
+    res = client.get("/matjib/static/manifest.webmanifest")
+    assert res.status_code == 200
+    assert res.headers["content-type"].startswith("application/manifest+json")
+    assert res.json()["start_url"] == "/matjib"
+
+
+def test_pwa_service_worker_and_icons():
+    assert client.get("/matjib/sw.js").status_code == 200
+    assert client.get("/matjib/static/icon-192.png").status_code == 200
+    assert client.get("/matjib/static/icon-512.png").status_code == 200
+    # 페이지에 manifest 링크와 SW 등록이 들어있는지
+    home = client.get("/matjib").text
+    assert "manifest.webmanifest" in home
+    assert "serviceWorker" in home
