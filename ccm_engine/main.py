@@ -77,11 +77,18 @@ def humanize_lyrics(client: anthropic.Anthropic, lyrics: str) -> str:
         return lyrics
     with open(HUMANIZER_SKILL_PATH, encoding="utf-8") as f:
         skill_instructions = f.read()
-    prompt = (
-        "다음 가사를 스킬 지침에 따라 분석하고 자연스러운 버전으로 재작성해줘. "
-        "결과에는 재작성된 최종 가사만 포함해줘(분석 리포트 생략):\n\n" + lyrics
+    # 스킬 원문은 Read/Grep 같은 도구로 참조 파일을 로드하라고 지시하지만, 이 호출에는
+    # 실제 도구가 연결되어 있지 않다. 도구가 있는 척 흉내내는 텍스트를 막기 위해
+    # "도구 호출 금지 + 최종 가사만 출력" 지시를 시스템 프롬프트 끝에 덧붙인다.
+    system = (
+        skill_instructions
+        + "\n\n---\n"
+        "위 지침은 참고 자료일 뿐이다. 너는 어떤 도구도 호출할 수 없고 파일을 읽을 수도 없다. "
+        "참조 파일을 로드하려 하지 말고, 분석 리포트나 패턴 목록도 출력하지 마라. "
+        "재작성된 최종 가사 텍스트만 출력해라."
     )
-    return _ask(client, skill_instructions, prompt, max_tokens=1200)
+    prompt = "다음 가사를 자연스러운 한국어로 교정해줘. 최종 가사만 출력해:\n\n" + lyrics
+    return _ask(client, system, prompt, max_tokens=1500)
 
 
 def build_suno_prompt(client: anthropic.Anthropic, lyrics: str, genre: str) -> str:
