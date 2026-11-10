@@ -1,0 +1,376 @@
+"""MIDI → 악보(MusicXML, PDF).
+
+music21 로 MIDI 를 읽어 가독성을 높인 뒤(양자화 + 조성/박자 삽입) MusicXML 로
+저장하고, MuseScore(또는 LilyPond) CLI 로 PDF 를 렌더링한다. 자동 채보 결과는
+잡음이 많으므로 이 단계의 정리가 최종 악보 품질을 크게 좌우한다.
+"""
+from __future__ import annotations
+
+import re
+import shutil
+import subprocess
+from pathlib import Path
+
+# PDF 렌더러 후보 (있는 것을 자동으로 사용)
+_MUSESCORE_BINARIES = ("mscore", "musescore", "musescore4", "mscore4", "musescore3")
+
+
+def _find_musescore() -> str | None:
+    for name in _MUSESCORE_BINARIES:
+        found = shutil.which(name)
+        if found:
+            return found
+    return None
+
+
+def _nearest_interval(from_pitch, target_name: str):
+    """`from_pitch` 에서 `target_name` 음까지, 옥타브 이동이 최소인 음정을 찾는다."""
+    from music21 import interval, pitch
+
+    base_octave = from_pitch.octave or 4
+    best = None
+    for octave in (base_octave - 1, base_octave, base_octave + 1):
+        candidate = pitch.Pitch(target_name)
+        candidate.octave = octave
+        itv = interval.Interval(noteStart=from_pitch, noteEnd=candidate)
+        if best is None or abs(itv.semitones) < abs(best.semitones):
+            best = itv
+    return best
+
+
+def _transpose_to_tonic(score, target_name: str):
+    """현재 조의 으뜸음을 `target_name` 으로 옮긴다(옥타브 이동 최소)."""
+    try:
+        k = score.analyze("key")
+    except Exception:
+        return score
+    itv = _nearest_interval(k.tonic, target_name)
+    if itv is None or itv.semitones == 0:
+        return score
+    return score.transpose(itv)
+
+
+def _apply_transpose(score, spec: str):
+    """`spec` 에 따라 전조한다.
+
+    - ``"off"``: 원조 유지
+    - ``"easy"``: 읽기 쉬운 조로 (장조→C, 단조→a단조)
+    - 부호 있는 정수(``"+2"``, ``"-3"``): 반음 단위로 올림/내림 (키 조정)
+
+    (특정 조 이름으로의 전조는 조성 자동 추정이 상대조를 잡는 등 불확실해
+    지원하지 않는다. 확실한 키 조정은 반음 단위를 쓴다.)
+    """
+    spec = (spec or "off").strip()
+    if spec in ("", "off"):
+        return score
+    if spec == "easy":
+        target = "A" if _safe_mode(score) == "minor" else "C"
+        return _transpose_to_tonic(score, target)
+    if re.fullmatch(r"[+-]?\d+", spec):
+        semitones = int(spec)
+        if semitones == 0:
+            return score
+        from music21 import interval
+
+        return score.transpose(interval.Interval(semitones))
+    return score  # 해석 불가한 값은 무시
+
+
+def _safe_mode(score) -> str:
+    try:
+        return score.analyze("key").mode
+    except Exception:
+        return "major"
+
+
+def to_monophonic(score):
+    """겹치는 음 중 가장 높은 음만 남겨 단선율(멜로디 한 줄)로 만든다.
+
+    basic-pitch 는 보컬에서도 배음/화음처럼 여러 음을 동시에 잡는다. 이를 매
+    순간 최고음 하나로 줄여 노래 따라부르는 멜로디 라인으로 만든다.
+    """
+    from music21 import chord as m21chord
+    from music21 import key as m21key
+    from music21 import meter, note, stream
+
+    part = score.parts[0] if score.parts else score
+    flat = part.flatten()
+    time_sig = next(iter(flat.getElementsByClass(meter.TimeSignature)), None)
+    key_sig = next(iter(flat.getElementsByClass(m21key.Key)), None)
+
+    rebuilt = stream.Part()
+    rebuilt.partName = "Melody"
+    if key_sig is not None:
+        rebuilt.append(m21key.Key(key_sig.tonic.name, key_sig.mode))
+    if time_sig is not None:
+        rebuilt.append(meter.TimeSignature(time_sig.ratioString))
+
+    # chordify 로 세로로 합친 뒤 각 슬라이스의 최고음만 취한다.
+    for el in part.chordify().recurse().getElementsByClass(
+        (note.Note, note.Rest, m21chord.Chord)
+    ):
+        if isinstance(el, note.Rest):
+            rebuilt.append(note.Rest(quarterLength=el.quarterLength))
+        elif isinstance(el, note.Note):
+            rebuilt.append(note.Note(el.nameWithOctave, quarterLength=el.quarterLength))
+        else:  # Chord -> 최고음
+            top = max(el.pitches, key=lambda p: p.midi)
+            rebuilt.append(note.Note(top.nameWithOctave, quarterLength=el.quarterLength))
+
+    rebuilt.makeNotation(inPlace=True)
+    new_score = stream.Score()
+    new_score.append(rebuilt)
+    return new_score
+
+
+def merge_repeated_notes(score):
+    """이어지는(붙어있는) 같은 음정의 음표들을 하나의 긴 음표로 합친다.
+
+    예: 같은 음정의 8분음표 3개(붙어있음) → 점4분음표 1개. 가사가 없다는 전제
+    이므로 재발음/타이 구분 없이 합친다. 사이에 쉼표나 다른 음정이 오면 합치지
+    않는다. 마디를 다시 만들어 바(bar) 걸침은 타이로 처리한다.
+
+    (가사를 넣는다면 음절이 바뀌는 지점은 합치면 안 되므로, 그땐 이 기능을 꺼야
+    한다.)
+    """
+    from music21 import chord as m21chord
+    from music21 import key as m21key
+    from music21 import meter, note, stream
+
+    part = score.parts[0] if score.parts else score
+    flat = part.flatten()
+
+    time_sig = next(iter(flat.getElementsByClass(meter.TimeSignature)), None)
+    key_sig = next(iter(flat.getElementsByClass(m21key.Key)), None)
+
+    # (종류, 값, 길이) 목록으로 병합: 같은 음정 연속 -> 길이 합산
+    merged: list[list] = []
+    for el in flat.getElementsByClass((note.Note, note.Rest, m21chord.Chord)):
+        if isinstance(el, note.Note):
+            if merged and merged[-1][0] == "note" and merged[-1][1] == el.nameWithOctave:
+                merged[-1][2] += el.quarterLength
+            else:
+                merged.append(["note", el.nameWithOctave, el.quarterLength])
+        elif isinstance(el, note.Rest):
+            if merged and merged[-1][0] == "rest":
+                merged[-1][2] += el.quarterLength
+            else:
+                merged.append(["rest", None, el.quarterLength])
+        else:  # 화음은 합치지 않고 그대로 둠
+            merged.append(["chord", [p.nameWithOctave for p in el.pitches], el.quarterLength])
+
+    rebuilt = stream.Part()
+    rebuilt.partName = "Melody"
+    if key_sig is not None:
+        rebuilt.append(m21key.Key(key_sig.tonic.name, key_sig.mode))
+    if time_sig is not None:
+        rebuilt.append(meter.TimeSignature(time_sig.ratioString))
+    for kind, value, ql in merged:
+        if kind == "note":
+            rebuilt.append(note.Note(value, quarterLength=ql))
+        elif kind == "rest":
+            rebuilt.append(note.Rest(quarterLength=ql))
+        else:
+            rebuilt.append(m21chord.Chord(value, quarterLength=ql))
+
+    rebuilt.makeNotation(inPlace=True)  # 마디 재구성 + 바 걸침 타이 처리
+    new_score = stream.Score()
+    new_score.append(rebuilt)
+    return new_score
+
+
+def midi_to_score(
+    midi_path: str | Path,
+    *,
+    detect_key: bool = True,
+    time_signature: str = "auto",
+    transpose: str = "off",
+    merge_repeats: bool = False,
+    melody_only: bool = False,
+    beat_times: list[float] | None = None,
+):
+    """MIDI 를 읽어 가독성을 높인 music21 Score 를 돌려준다.
+
+    - 양자화: 자동 채보로 어긋난 음길이를 16분음표 그리드에 맞춘다.
+    - 박자표: ``"auto"`` 면 MIDI 에 심긴 박자표를 그대로 존중한다(pop2piano/piano
+      처럼 박자 구조가 있는 엔진 출력에서 3/4·6/8 등이 살아난다). ``"4/4"``
+      같은 값을 주면 그 박자표로 강제 지정한다. (참고: basic-pitch 처럼 박자
+      메타가 없는 MIDI 는 파싱 시 4/4 로 기본 설정된다 — 내용 기반 박자 추론은
+      하지 않는다.)
+    - 전조(`transpose`): ``"off"``(기본)=원조, ``"easy"``=읽기 쉬운 조(장조→C,
+      단조→a단조), ``"+2"``/``"-3"``=반음 단위 올림/내림(키 조정).
+    - 조성: `detect_key` 면 조성을 추정해 조표를 넣는다(안 되면 조용히 건너뜀).
+    """
+    try:
+        from music21 import converter, meter
+    except ImportError as e:  # pragma: no cover - 설치 안내용
+        raise RuntimeError("music21 이 설치되어 있지 않습니다: `pip install music21`.") from e
+
+    if beat_times:
+        # 실제 박(beat) 그리드에 음표를 정렬해 노래 리듬대로 마디/리듬을 구성한다.
+        # (이미 단선율 + 4/4 로 만들어지므로 아래 양자화/melody_only 는 건너뜀.)
+        from . import beats
+
+        score = beats.beat_aligned_score(midi_path, beat_times)
+    else:
+        score = converter.parse(str(midi_path))
+        # 단순화(merge) 시엔 8분음표 그리드로 굵게 양자화해 잇단음표 잡음을 없앤다.
+        # 평소엔 16분음표+셋잇단(기본)으로 더 정밀하게.
+        if merge_repeats:
+            score.quantize(quarterLengthDivisors=(2,), inPlace=True)
+        else:
+            score.quantize(inPlace=True)
+
+        if time_signature and time_signature != "auto":
+            # 강제 지정: 기존(파싱된) 박자표를 제거하고 지정 값으로 교체
+            part = score.parts[0] if score.parts else score
+            for existing in list(part.recurse().getElementsByClass(meter.TimeSignature)):
+                part.remove(existing, recurse=True)
+            part.insert(0, meter.TimeSignature(time_signature))
+
+        if melody_only:
+            score = to_monophonic(score)  # 겹친 음을 최고음 한 줄(멜로디)로 축약
+
+    if merge_repeats:
+        score = merge_repeated_notes(score)  # 같은 음 연속을 하나로 합침
+
+    if transpose and transpose != "off":
+        score = _apply_transpose(score, transpose)  # 전조된 새 Score 로 교체
+
+    if detect_key:
+        part = score.parts[0] if score.parts else score
+        try:
+            part.insert(0, score.analyze("key"))  # 전조 후의 조를 조표로
+        except Exception:
+            pass  # 조성 추정 실패는 치명적이지 않음
+
+    return score
+
+
+def write_musicxml(score, dst_dir: str | Path, stem_name: str) -> Path:
+    """music21 Score 를 MusicXML 파일로 저장한다."""
+    dst_dir = Path(dst_dir)
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    dst = dst_dir / f"{stem_name}.musicxml"
+    score.write("musicxml", fp=str(dst))
+    return dst
+
+
+def midi_to_musicxml(
+    midi_path: str | Path,
+    dst_dir: str | Path,
+    *,
+    detect_key: bool = True,
+    time_signature: str = "auto",
+    transpose: str = "off",
+    merge_repeats: bool = False,
+    melody_only: bool = False,
+    beat_times: list[float] | None = None,
+    with_chords: bool = False,
+    chord_source_midi: str | Path | None = None,
+) -> Path:
+    """MIDI 를 정리(+선택적 코드 심볼)해 MusicXML 로 저장하고 경로를 돌려준다.
+
+    `chord_source_midi` 를 주면 그 MIDI(예: 분리된 반주)의 화음에서 코드를 뽑아
+    멜로디 악보 위에 얹는다(오선엔 반영 안 함). 없으면 멜로디 자체에서 뽑는다.
+    """
+    midi_path = Path(midi_path)
+    score = midi_to_score(
+        midi_path,
+        detect_key=detect_key,
+        time_signature=time_signature,
+        transpose=transpose,
+        merge_repeats=merge_repeats,
+        melody_only=melody_only,
+        beat_times=beat_times,
+    )
+    if with_chords:
+        from . import chords
+
+        if chord_source_midi is not None:
+            # 반주를 멜로디와 같은 조건으로 정리해 마디를 맞춘 뒤 코드만 추출
+            source = midi_to_score(
+                chord_source_midi,
+                detect_key=False,
+                time_signature=time_signature,
+                transpose=transpose,
+            )
+            chords.annotate_from(score, source)
+        else:
+            chords.annotate(score)
+    return write_musicxml(score, dst_dir, midi_path.stem)
+
+
+def _verovio_resource_path(verovio) -> str:
+    """verovio 폰트 리소스 폴더 경로를 돌려준다.
+
+    verovio(C++)는 한글/유니코드 경로에서 폰트 파일을 읽지 못한다. 설치 경로에
+    비ASCII 문자가 있으면(예: `D:\\음악작업\\...`) 폰트 데이터를 ASCII 임시
+    폴더로 한 번 복사해 그 경로를 리소스 경로로 쓴다.
+    """
+    import os
+    import shutil
+    import tempfile
+
+    data_dir = os.path.join(os.path.dirname(verovio.__file__), "data")
+    if data_dir.isascii():
+        return data_dir
+
+    tmp_root = tempfile.gettempdir()
+    if not tmp_root.isascii():
+        return data_dir  # 임시 폴더도 비ASCII 면 방법이 없음 - 원본 반환
+
+    ascii_dir = os.path.join(tmp_root, "verovio_data")
+    if not os.path.isdir(ascii_dir):
+        shutil.copytree(data_dir, ascii_dir)
+    return ascii_dir
+
+
+def musicxml_to_svg(musicxml_path: str | Path) -> list[str]:
+    """MusicXML 을 페이지별 SVG 마크업 리스트로 렌더링한다(verovio).
+
+    MuseScore 없이 순수 파이썬으로 동작해 웹 인라인 미리보기에 쓴다.
+    """
+    try:
+        import verovio
+    except ImportError as e:  # pragma: no cover - 설치 안내용
+        raise RuntimeError("verovio 가 설치되어 있지 않습니다: `pip install verovio`.") from e
+
+    # 폰트/리소스 경로를 명시적으로 지정한다(한글 경로면 ASCII 임시 폴더로 복사).
+    # 자동 탐지는 실행 컨텍스트(웹 워커 스레드 등)에 따라 폰트 로딩이 실패할 수 있다.
+    toolkit = verovio.toolkit(False)
+    toolkit.setResourcePath(_verovio_resource_path(verovio))
+    toolkit.setOptions({"adjustPageHeight": True, "scale": 40, "pageWidth": 2100})
+    # 파일 경로를 verovio 에 직접 넘기면 한글/유니코드 경로(특히 Windows)에서
+    # 열지 못한다. Python 으로 내용을 읽어 문자열로 전달한다.
+    xml_data = Path(musicxml_path).read_text(encoding="utf-8")
+    if not toolkit.loadData(xml_data):
+        raise RuntimeError(
+            "verovio 가 악보를 렌더링하지 못했습니다. 프로젝트 경로에 한글이 있으면 "
+            "영문 경로로 옮기면 해결될 수 있습니다."
+        )
+    return [toolkit.renderToSVG(i) for i in range(1, toolkit.getPageCount() + 1)]
+
+
+def musicxml_to_pdf(musicxml_path: str | Path, dst_dir: str | Path) -> Path:
+    """MusicXML 을 PDF 로 렌더링한다. MuseScore CLI 필요."""
+    musicxml_path = Path(musicxml_path)
+    dst_dir = Path(dst_dir)
+    dst_dir.mkdir(parents=True, exist_ok=True)
+
+    mscore = _find_musescore()
+    if not mscore:
+        raise RuntimeError(
+            "MuseScore 를 찾을 수 없어 PDF 를 만들 수 없습니다. MusicXML 은 생성되었으니 "
+            "MuseScore 로 열어 PDF 로 내보내거나, MuseScore 설치 후 다시 실행하세요."
+        )
+
+    dst = dst_dir / f"{musicxml_path.stem}.pdf"
+    # MuseScore 는 헤드리스 렌더링 시 가상 디스플레이가 필요할 수 있음(xvfb-run).
+    cmd = [mscore, "-o", str(dst), str(musicxml_path)]
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace"
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"MuseScore PDF 렌더링 실패:\n{(proc.stderr or '').strip()}")
+    return dst

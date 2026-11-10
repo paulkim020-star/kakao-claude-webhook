@@ -1,0 +1,171 @@
+# music-sheet-transcriber
+
+오디오 파일(mp3 / mp4)을 **악보(PDF)** 로 자동 채보(採譜)하는 파이프라인.
+
+```
+mp3/mp4 ─▶ WAV ─▶ (선택) 스템 분리 ─▶ MIDI ─▶ MusicXML ─▶ PDF
+        ffmpeg        Demucs      채보 엔진   music21   MuseScore
+```
+
+## 채보 엔진 (논문 기반)
+
+| 엔진 | 근거 논문 | 적합 케이스 |
+|------|-----------|-------------|
+| `basic-pitch` (기본) | Bittner 외, *A Lightweight Instrument-Agnostic Model for Polyphonic Note Transcription*, ICASSP 2022 | 특정 파트/멜로디를 MIDI 로. 스템 분리와 조합 |
+| `pop2piano` | Choi & Lee, *Pop2Piano: Pop Audio-based Piano Cover Generation*, [arXiv:2211.00895](https://arxiv.org/abs/2211.00895) | **대중가요 → 피아노 커버**. 멜로디/코드 추출 없이 풀 믹스에서 직접 피아노 MIDI 생성 |
+| `piano` | Kong 외, *High-resolution Piano Transcription with Pedals by Regressing Onset and Offset Times*, 2021 (Onsets&Frames 계열) | **솔로 피아노 녹음**을 고해상도로 채보. 풀 믹스가 아닌 피아노 연주 오디오에 적합 |
+
+`pop2piano` 는 풀 믹스를 그대로 입력받아 피아노 커버를 만들므로 **스템 분리를
+생략**하고 44100Hz 로 처리합니다. 대중가요를 피아노 악보로 뽑는 것이 목표라면
+이 엔진이 정통 경로입니다. `piano` 엔진도 오디오를 직접 받으므로 스템 분리를
+생략하며, **솔로 피아노 녹음**에 쓰는 것이 맞습니다(풀 믹스에 쓰면 부정확).
+
+## ⚠️ 먼저 알아둘 것 (현실적인 기대치)
+
+자동 채보는 음악 종류에 따라 품질이 크게 다릅니다.
+
+| 입력 | 품질 |
+|------|------|
+| 단선율(허밍/솔로 악기), 피아노 솔로 | 실용적, 약간의 후보정으로 사용 가능 |
+| **풀 믹스 대중가요** | 통째로는 잡음 투성이 → **파트 분리 후 특정 스템(보컬 멜로디 등)만 채보** 권장 |
+
+풀 믹스 곡을 "원곡 그대로의 완벽한 총보"로 만드는 것은 현재 기술로 불가능합니다.
+이 도구는 **보컬 멜로디 라인** 같은 실용적 채보를 목표로 하며, 결과는 항상
+사람의 후보정을 전제로 합니다.
+
+## 설치
+
+```bash
+# 1) 시스템 의존성
+#    - ffmpeg   : 오디오/영상 디코딩
+#    - MuseScore: MusicXML → PDF 렌더링
+# 예 (Debian/Ubuntu):
+sudo apt-get install -y ffmpeg musescore3
+# 예 (macOS):
+brew install ffmpeg
+brew install --cask musescore
+
+# 2) 파이썬 의존성 (torch/tensorflow 를 끌어와 용량이 큽니다)
+pip install -r requirements.txt
+
+# 3) (선택) 엔진별 추가 설치
+pip install -r requirements-pop2piano.txt   # 대중가요 → 피아노 커버
+pip install -r requirements-piano.txt        # 솔로 피아노 고해상도 채보
+```
+
+## 사용법
+
+```bash
+# 보컬 멜로디만 뽑아서 채보 (기본값)
+python -m transcriber.cli 노래.mp3 --out out/
+
+# 영상(mp4)에서 오디오만 추출해 채보
+python -m transcriber.cli 무대영상.mp4
+
+# 원본을 통째로 채보하며 코드 심볼(C, Am, G7...)까지 표기
+python -m transcriber.cli 피아노솔로.mp3 --stem none --chords
+
+# 대중가요를 피아노 커버 악보로 (Pop2Piano 엔진, 스템 분리 생략)
+python -m transcriber.cli 대중가요.mp3 --engine pop2piano
+
+# 솔로 피아노 녹음을 고해상도로 채보 (piano 엔진)
+python -m transcriber.cli 피아노연주.mp3 --engine piano
+
+# 보컬 멜로디(자동 정리) + 반주에서 뽑은 코드 = 기타용 리드시트
+python -m transcriber.cli 노래.mp3 --stem vocals --chords
+
+# 같은 음 연속을 하나로 합쳐 더 단순하게 (가사 없을 때)
+python -m transcriber.cli 노래.mp3 --stem vocals --chords --merge
+
+# 실제 박자에 리듬을 정렬해 노래답게 (가장 "악보다운" 결과)
+python -m transcriber.cli 노래.mp3 --stem vocals --chords --beats
+
+# 조표가 복잡한 곡을 읽기 쉬운 조(C장조/a단조)로 전조
+python -m transcriber.cli 노래.mp3 --transpose easy
+
+# 노래 키를 2반음 올리기 / 내리기 (보컬 키 조정)
+python -m transcriber.cli 노래.mp3 --transpose +2
+python -m transcriber.cli 노래.mp3 --transpose -2
+
+# MuseScore 없이 MusicXML 까지만 (직접 MuseScore 로 열어 확인)
+python -m transcriber.cli 노래.mp3 --no-pdf
+```
+
+옵션:
+
+| 옵션 | 설명 |
+|------|------|
+| `-o, --out` | 결과 폴더 (기본 `out/`) |
+| `-e, --engine` | 채보 엔진: `basic-pitch`(기본)·`pop2piano`·`piano` |
+| `-s, --stem` | 채보할 파트: `vocals`(기본)·`drums`·`bass`·`other`·`none` (pop2piano 엔진에선 무시) |
+| `--composer` | pop2piano 스타일 프리셋 `composer1`..`composer21` (기본 `composer1`) |
+| `--time` | 박자표. `auto`(기본)=MIDI 박자표 존중, `3/4`·`4/4` 등=강제 지정 |
+| `--transpose` | 전조/키 조정. `off`(기본)·`easy`(장조→C, 단조→a단조)·`+2`/`-3`(반음 올림/내림) |
+| `-c, --chords` | 코드 심볼(C, Am, G7…)을 **악보 위에** 표기(음표엔 반영 안 함, 기타 반주용). 보컬 스템이면 분리된 반주에서 코드를 뽑는다 |
+| `--no-tidy` | 보컬 정리(음역대 제한/짧은 잔음 제거)를 끈다. 기본은 보컬 스템일 때 자동 |
+| `--merge` | 이어지는 같은 음정의 음표를 하나의 긴 음표로 합쳐 단순화 (가사 없을 때 유용) |
+| `--beats` | 곡의 실제 박(beat)을 검출해 음표를 박 그리드에 정렬 → 리듬/마디선이 노래 흐름대로 |
+| `--no-pdf` | PDF 렌더링 생략, MusicXML 까지만 생성 |
+
+산출물은 `out/` 에 MIDI, MusicXML, PDF 로 쌓입니다. 악보는 조성을 자동 추정해
+조표를 넣고, 음길이를 양자화해 가독성을 높입니다. 박자표는 `--time auto`(기본)
+에서 MIDI 에 심긴 박자표를 존중합니다 — pop2piano/piano 처럼 박자 구조가 있는
+엔진 출력에서 3/4·6/8 등이 살아납니다. (basic-pitch 처럼 박자 메타가 없는 MIDI
+는 4/4 로 기본 설정됩니다. 필요하면 `--time 3/4` 로 강제 지정하세요.)
+
+## 웹 UI
+
+브라우저에서 파일을 올려 채보하고 악보를 내려받을 수 있습니다.
+
+```bash
+uvicorn transcriber.web.app:app --host 0.0.0.0 --port 8000
+# http://localhost:8000 접속 → 파일 업로드 → 엔진/파트/코드/PDF 옵션 선택
+# → 결과 화면에서 악보 미리보기(verovio SVG) 확인 + 다운로드
+```
+
+채보가 끝나면 **악보를 브라우저에서 바로 미리보기**(verovio SVG 렌더링, MuseScore
+불필요)하고 MIDI·MusicXML·PDF 를 내려받습니다. 필요한 도구(ffmpeg 등)가 없으면
+결과 화면에 무엇을 설치해야 하는지 안내됩니다.
+
+## 구조
+
+```
+transcriber/
+├── audio.py       # ffmpeg: mp3/mp4 → WAV
+├── separate.py    # Demucs: 스템 분리
+├── transcribe.py  # basic-pitch: 오디오 → MIDI
+├── transcribe.py  # 채보 엔진: basic-pitch / pop2piano / piano
+├── beats.py       # 박자 추적 + 박 그리드 리듬 정렬 (--beats)
+├── notation.py    # music21 + MuseScore: MIDI → 조성/박자 정리 → MusicXML → PDF
+├── chords.py      # 마디별 코드 심볼(반주) 인식
+├── pipeline.py    # 단계 오케스트레이션 (엔진별 분기)
+├── cli.py         # 커맨드라인 진입점
+└── web/           # FastAPI 업로드 UI (app.py + templates/)
+tests/
+├── test_notation.py    # MIDI → MusicXML, 조성/박자, 코드 표기 검증
+├── test_chords.py      # 코드 심볼 인식 검증
+├── test_transcribe.py  # 엔진 선택 및 pop2piano 라우팅 검증
+└── test_web.py         # 웹 라우팅/업로드 흐름 검증
+```
+
+## 테스트
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+무거운 AI 모델 없이 돌 수 있는 표기(notation) 단계를 검증합니다.
+
+## 로드맵 / 개선 여지
+
+- [x] 조성·박자 자동 추정 및 음길이 양자화로 가독성 개선
+- [x] 코드(chord) 인식으로 코드 심볼 표기
+- [x] 웹 UI (업로드 → 채보 → 다운로드)
+- [x] Pop2Piano 엔진(대중가요 → 피아노 커버) 백엔드 선택
+- [x] 웹에서 악보 미리보기(verovio SVG 렌더링)
+- [x] 피아노 특화 엔진(Onsets&Frames 계열, Kong 외 2021) 추가
+- [x] 박자표 auto 존중(MIDI 메타 기반) + 강제 지정 옵션
+- [ ] 박자 메타 없는 MIDI 의 내용 기반 박자 추론(3/4 vs 4/4 등)
+- [x] 읽기 쉬운 조옮김 + 반음 단위 키 올림/내림(`--transpose easy`/`+2`/`-2`)
+- [ ] MT3 멀티트랙 백엔드 추가 (여러 악기 동시 채보)
