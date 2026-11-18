@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ "계정 만들기" if mode == "register" else "로그인" }} · PDF 서재{% endblock %}
+{% block body %}
+<main id="main" class="auth">
+  <p class="brand">PDF 서재</p>
+  <h1>{{ "계정 만들기" if mode == "register" else "서재에 들어가기" }}</h1>
+  <p class="lead">
+    PDF를 올리면 EPUB으로 바꿔서 책장에 꽂아 둡니다.
+    {% if mode == "register" %}계정 정보와 책은 이 컴퓨터에만 저장됩니다.{% else %}계정마다 서재가 따로 있습니다.{% endif %}
+  </p>
+
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+
+  <form method="post" action="/{{ mode }}" class="auth-form">
+    <label for="username">아이디</label>
+    <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+    <label for="password">비밀번호</label>
+    <input id="password" name="password" type="password" required
+           autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}"
+           {% if mode == "register" %}minlength="6"{% endif %}>
+    <button class="btn btn-primary" type="submit">{{ "계정 만들기" if mode == "register" else "로그인" }}</button>
+  </form>
+
+  <p class="auth-switch">
+    {% if mode == "register" %}이미 계정이 있나요? <a href="/login">로그인</a>
+    {% else %}처음이신가요? <a href="/register">계정 만들기</a>{% endif %}
+  </p>
+</main>
+{% endblock %}

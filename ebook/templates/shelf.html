@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}내 서재 · PDF 서재{% endblock %}
+{% block body %}
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="/library">PDF 서재</a>
+    <form class="search" method="get" action="/library" role="search">
+      <label class="sr" for="q">제목이나 저자로 찾기</label>
+      <input id="q" name="q" type="search" value="{{ q }}" placeholder="제목, 저자 검색">
+      <input type="hidden" name="sort" value="{{ sort }}">
+    </form>
+    <form class="whoami" method="post" action="/logout">
+      <span>{{ user.username }}</span>
+      <button class="link-btn" type="submit">로그아웃</button>
+    </form>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <div class="page-head">
+    <div>
+      <h1>내 서재</h1>
+      <p class="count">{% if q %}‘{{ q }}’ 검색 결과 {{ books|length }}권{% else %}{{ books|length }}권{% endif %}</p>
+    </div>
+    <div class="page-actions">
+      <form method="get" action="/library" class="sort">
+        <label class="sr" for="sort">정렬</label>
+        <select id="sort" name="sort" data-autosubmit>
+          {% for key, (label, _) in sorts.items() %}
+          <option value="{{ key }}" {% if key == sort %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+        <noscript><button class="btn" type="submit">적용</button></noscript>
+      </form>
+      <form id="upload-form" method="post" action="/upload" enctype="multipart/form-data">
+        <input id="file-input" class="sr" type="file" name="files" accept="application/pdf,.pdf" multiple required>
+        <label class="btn btn-primary" for="file-input" tabindex="0" role="button">PDF 올리기</label>
+      </form>
+    </div>
+  </div>
+
+  {% if added or skipped %}
+  <p class="notice" role="status">
+    {% if added %}{{ added }}권을 서재에 넣었습니다.{% endif %}
+    {% if skipped %}PDF가 아니거나 열 수 없는 파일 {{ skipped }}개는 넣지 못했습니다.{% endif %}
+  </p>
+  {% endif %}
+
+  <ul class="shelf" aria-label="내 책 목록">
+    {% for b in books %}
+    <li class="book" style="--i: {{ [loop.index0, 11]|min }}">
+      <a class="book-link" href="/book/{{ b.id }}">
+        <span class="cover{% if not b.has_cover %} cover-plain c{{ b.id % 6 }}{% endif %}">
+          {% if b.has_cover %}
+          <img src="/book/{{ b.id }}/cover" alt="{{ b.title }} 표지" width="160" height="240" loading="lazy">
+          {% else %}
+          <span class="cover-title">{{ b.title }}</span>
+          {% endif %}
+          {% if b.status == "converting" %}<span class="badge">변환 중</span>
+          {% elif b.status == "failed" %}<span class="badge badge-warn">EPUB 없음</span>{% endif %}
+        </span>
+        <span class="label">
+          <strong>{{ b.title }}</strong>
+          <span>{{ b.author or "저자 정보 없음" }}</span>
+        </span>
+      </a>
+    </li>
+    {% else %}
+    <li class="shelf-empty">
+      {% if q %}‘{{ q }}’에 맞는 책이 없습니다.{% else %}아직 꽂힌 책이 없습니다. 위의 ‘PDF 올리기’로 첫 책을 넣어 보세요. 여러 권을 한꺼번에 고를 수 있고, 창에 끌어다 놓아도 됩니다.{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</main>
+<div class="drop-hint" aria-hidden="true">PDF를 놓으면 서재에 꽂힙니다</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ book.title }} · PDF 서재{% endblock %}
+{% block body %}
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="/library">PDF 서재</a>
+    <a class="back" href="/library">← 서재로</a>
+    <form class="whoami" method="post" action="/logout">
+      <span>{{ user.username }}</span>
+      <button class="link-btn" type="submit">로그아웃</button>
+    </form>
+  </div>
+</header>
+
+<main id="main" class="wrap detail">
+  <div class="detail-cover">
+    <span class="cover{% if not book.has_cover %} cover-plain c{{ book.id % 6 }}{% endif %}">
+      {% if book.has_cover %}
+      <img src="/book/{{ book.id }}/cover" alt="{{ book.title }} 표지" width="240" height="360">
+      {% else %}
+      <span class="cover-title">{{ book.title }}</span>
+      {% endif %}
+    </span>
+  </div>
+
+  <div class="detail-body">
+    <h1>{{ book.title }}</h1>
+    <p class="author">{{ book.author or "저자 정보 없음" }}</p>
+
+    {% if book.status == "converting" %}
+    <p class="notice" role="status">EPUB으로 바꾸는 중입니다. 끝나면 이 화면이 새로고침됩니다.</p>
+    {% elif book.status == "failed" %}
+    <p class="notice notice-warn" role="status">{{ book.error }} 원본 PDF는 그대로 보관되어 있습니다.</p>
+    {% endif %}
+
+    <div class="actions">
+      {% if book.status == "ready" %}
+      <a class="btn btn-primary" href="/book/{{ book.id }}/epub">EPUB 받기</a>
+      {% endif %}
+      <a class="btn" href="/book/{{ book.id }}/pdf">원본 PDF 받기</a>
+      <form method="post" action="/book/{{ book.id }}/delete" data-confirm="‘{{ book.title }}’을(를) 서재에서 지울까요? 원본 PDF와 EPUB이 함께 삭제됩니다.">
+        <button class="link-btn danger" type="submit">서재에서 삭제</button>
+      </form>
+    </div>
+
+    <h2>PDF 속성</h2>
+    <dl class="props">
+      <div><dt>쪽수</dt><dd>{{ book.pages }}쪽</dd></div>
+      <div><dt>파일 크기</dt><dd>{{ fmt_size(book.file_size) }}</dd></div>
+      <div><dt>원본 파일명</dt><dd>{{ book.orig_name }}</dd></div>
+      <div><dt>PDF 버전</dt><dd>{{ info.pdf_version or "정보 없음" }}</dd></div>
+      <div><dt>주제</dt><dd>{{ info.subject or "정보 없음" }}</dd></div>
+      <div><dt>키워드</dt><dd>{{ info.keywords or "정보 없음" }}</dd></div>
+      <div><dt>만든 프로그램</dt><dd>{{ info.creator or "정보 없음" }}</dd></div>
+      <div><dt>PDF 변환기</dt><dd>{{ info.producer or "정보 없음" }}</dd></div>
+      <div><dt>만든 날</dt><dd>{{ info.created or "정보 없음" }}</dd></div>
+      <div><dt>고친 날</dt><dd>{{ info.modified or "정보 없음" }}</dd></div>
+      <div><dt>서재에 넣은 날</dt><dd>{{ book.added_at[:10] }}</dd></div>
+    </dl>
+
+    {% if info.toc %}
+    <h2>목차</h2>
+    <ol class="toc">
+      {% for level, title, page in info.toc %}
+      <li style="--lvl: {{ level - 1 }}"><span>{{ title }}</span><span class="toc-page">{{ page }}쪽</span></li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}
