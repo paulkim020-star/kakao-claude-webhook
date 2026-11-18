@@ -113,7 +113,7 @@ def _epub(user_id: int, book) -> str:
 
 
 @router.get("/book/{book_id}/read")
-def read(request: Request, book_id: int, c: int | None = None):
+def read(request: Request, book_id: int, c: int | None = None, r: float | None = None):
     user = current_user(request)
     if user is None:
         return _login_redirect()
@@ -135,7 +135,9 @@ def read(request: Request, book_id: int, c: int | None = None):
         "book": book, "chapters": [ch.title for ch in chapters], "index": index,
         "chapter": chapters[index], "total": len(chapters), "start": round(start, 3),
         "span": round(span, 3),
-        "resume": saved["ratio"] if saved and saved["chapter"] == index else 0,
+        # r: 책갈피/이전 장 끝으로 열 때 지정한 위치 (0~1). 없으면 저장된 위치.
+        "resume": min(max(r, 0), 1) if r is not None
+                  else (saved["ratio"] if saved and saved["chapter"] == index else 0),
     })
 
 

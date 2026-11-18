@@ -33,10 +33,14 @@
   </header>
 
   <main id="main">
-    <article class="prose" id="prose">
-      <p class="eyebrow">{{ index + 1 }} / {{ total }}</p>
-      {{ chapter.html|safe }}
-    </article>
+    <div class="stage" id="stage">
+      <div class="frame">
+        <article class="prose" id="prose">
+          <p class="eyebrow">{{ index + 1 }} / {{ total }}</p>
+          <div id="chapter-body">{{ chapter.html|safe }}</div>
+        </article>
+      </div>
+    </div>
 
     <nav class="r-pager" aria-label="장 이동">
       {% if index > 0 %}
@@ -50,6 +54,8 @@
     </nav>
   </main>
 
+  <div class="r-pageno" id="pageno" hidden></div>
+
   <aside class="drawer" id="toc" aria-label="목차" inert>
     <h2>목차</h2>
     <ol>
@@ -60,6 +66,13 @@
   </aside>
 
   <section class="popover" id="settings" aria-label="글자 설정" inert>
+    <div class="set-row">
+      <span class="set-label">보기</span>
+      <div class="seg" role="group" aria-label="보기 방식">
+        <button type="button" data-set="mode" data-value="scroll" aria-pressed="false">스크롤</button>
+        <button type="button" data-set="mode" data-value="page" aria-pressed="false">쪽 넘김</button>
+      </div>
+    </div>
     <div class="set-row">
       <span class="set-label">바탕</span>
       <div class="seg" role="group" aria-label="바탕 색">

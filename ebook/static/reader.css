@@ -147,3 +147,27 @@ body.reader { background: var(--bg); color: var(--ink); }
 @media (prefers-reduced-motion: reduce) {
   .r-bar, .drawer, .popover, .scrim, .r-progress span { transition-duration: 1ms; transition-delay: 0s !important; }
 }
+
+/* 쪽 넘김 보기: 본문을 CSS 다단으로 나눠 가로로 한 쪽씩 보여준다 */
+body.paged { overflow: hidden; overscroll-behavior: none; }
+.paged .stage {
+  position: fixed; z-index: 1; inset: calc(var(--bar-h) + 3px) 0 44px 0;
+  display: flex; justify-content: center; overflow: hidden;
+  padding: 20px clamp(16px, 5vw, 32px) 0; touch-action: pan-y;
+}
+.paged .frame { flex: none; width: var(--pw); height: 100%; overflow: hidden; }  /* 다음 쪽 글자가 비쳐 보이지 않게 본문 폭으로 자른다 */
+.paged .prose {
+  --pgap: 48px; width: var(--pw); max-width: none; height: 100%; margin: 0; padding: 0;
+  column-width: var(--pw); column-gap: var(--pgap); column-fill: auto;
+  will-change: transform;
+}
+.paged .prose .eyebrow { display: none; }
+.paged .prose h1, .paged .prose h2, .paged .prose h3 { break-after: avoid; }
+.paged .prose p { orphans: 2; widows: 2; }
+.paged .prose img { max-height: 100%; width: auto; max-width: 100%; object-fit: contain; break-inside: avoid; }
+.paged .prose tr { break-inside: avoid; }
+.paged .r-pager { display: none; }
+.r-pageno {
+  position: fixed; z-index: 6; inset: auto 0 0 0; height: 44px; display: grid; place-items: center;
+  color: var(--muted); font-size: 13px; pointer-events: none;
+}

@@ -521,3 +521,16 @@ def test_reader_shows_hwpx_and_docx_books(tmp_path):
     assert "<h1>첫째 장</h1>" in page and "본문 한 줄입니다." in page and "셀가" in page
     assert "/book/1/asset/EPUB/images/img_1.png" in page
     assert "둘째 본문입니다." in client.get("/book/1/read?c=1").text
+
+
+def test_reader_page_mode_controls_and_explicit_position(tmp_path):
+    client = signup()
+    upload(client, make_pdf(tmp_path / "a.pdf"))
+    page = client.get("/book/1/read?c=0").text
+    assert 'data-set="mode" data-value="page"' in page and 'id="stage"' in page and 'id="pageno"' in page
+    # r: 이전 장 끝이나 책갈피로 열 때 지정하는 위치 (0~1로 보정)
+    assert 'data-resume="1"' in client.get("/book/1/read?c=0&r=1").text or 'data-resume="1.0"' in client.get("/book/1/read?c=0&r=1").text
+    assert 'data-resume="0.25"' in client.get("/book/1/read?c=0&r=0.25").text
+    assert 'data-resume="0"' in client.get("/book/1/read?c=0&r=-5").text or 'data-resume="0.0"' in client.get("/book/1/read?c=0&r=-5").text
+    client.post("/book/1/progress", json={"chapter": 0, "ratio": 0.6, "percent": 30})
+    assert 'data-resume="0.25"' in client.get("/book/1/read?c=0&r=0.25").text  # 지정이 저장 위치보다 우선
