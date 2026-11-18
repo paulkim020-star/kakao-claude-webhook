@@ -655,7 +655,8 @@ def test_hwp5_section_headings_tables_and_header_footer():
     assert kinds == ["para", "para", "table", "para"]
     assert (blocks[0][2], blocks[0][3]) == (1, "서문") and blocks[1][2] == 0   # 개요 스타일만 제목
     table = blocks[2][1]
-    assert 'colspan="2"' in table and table.count("<tr>") == 2 and "칸 다" in table
+    # 짧은 칸의 공백은 줄바꿈되지 않는 공백(U+00A0)으로 바뀐다
+    assert 'colspan="2"' in table and table.count("<tr>") == 2 and "칸\u00a0다" in table
     assert "머리말" not in str(blocks) and blocks[3][3] == "표 다음 글"
 
 
