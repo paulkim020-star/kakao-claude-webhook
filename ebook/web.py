@@ -117,9 +117,9 @@ def logout():
 # ------------------------------------------------------------------ 서재
 
 REASONS = {
-    "hwp": "옛 한글(.hwp)·워드(.doc) 파일은 열 수 없습니다. 한글에서 ‘다른 이름으로 저장’으로 "
-           "HWPX나 PDF로 저장해서 올려 주세요.",
-    "bad": "PDF, DOCX, HWPX가 아니거나 열 수 없는 파일은 넣지 못했습니다.",
+    "doc": "옛 워드(.doc) 파일은 열 수 없습니다. 워드에서 ‘다른 이름으로 저장’으로 DOCX나 PDF로 "
+           "저장해서 올려 주세요.",
+    "bad": "PDF, DOCX, HWP, HWPX가 아니거나 열 수 없는 파일은 넣지 못했습니다.",
     "lone_cover": "짝이 되는 내지가 없는 표지는 넣지 못했습니다. 파일 이름을 맞춰 주세요. "
                   "(예: 나의책_표지.png, 나의책_내지.docx)",
     "bad_cover": "표지는 이미지나 PDF만 쓸 수 있습니다.",
@@ -267,10 +267,10 @@ def new_book(request: Request, background: BackgroundTasks, interior: UploadFile
         cover_file = next(iter(_stage([cover], staging)), None)
         if body is None:
             error = "내지 파일을 골라 주세요."
-        elif body.kind == "hwp":
-            error = REASONS["hwp"]
+        elif body.kind == "doc":
+            error = REASONS["doc"]
         elif body.kind not in pairing.BOOK_KINDS:
-            error = "내지는 PDF, DOCX, HWPX만 쓸 수 있습니다."
+            error = "내지는 PDF, DOCX, HWP, HWPX만 쓸 수 있습니다."
         else:
             try:
                 book_id = create_book(user["id"], body, cover_file, title.strip(), author.strip())

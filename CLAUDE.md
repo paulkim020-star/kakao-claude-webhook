@@ -18,18 +18,20 @@ skill response JSON format (`simpleText`) and returned.
 - `matjib/` - 맛집찾기 앱(진짜맛집) 웹 프로토타입 (`/matjib`). 목업 데이터로
   교차검증 점수 산식(`engine.py`)과 화면 흐름(홈/리스트/상세)을 검증하는 단계.
   실제 API 연동 전이며, 기획 배경은 `docs/맛집찾기앱-기획안.md` 참고.
-- `ebook/` - PDF 서재: 표지(이미지/PDF) + 내지(PDF/DOCX/HWPX)를 EPUB으로 변환해 계정별
+- `ebook/` - PDF 서재: 표지(이미지/PDF) + 내지(PDF/DOCX/HWP/HWPX)를 EPUB으로 변환해 계정별
   책장(표지 진열)에 보관하는 오프라인 데스크탑 앱. 웹훅 서버와 별개로
   `python -m ebook` (기본 127.0.0.1:8765)로 실행. 로컬 계정(scrypt+서명 쿠키),
   파일 판별·속성·표지(`meta.py`), 내지→EPUB(`convert.py`: PDF=PyMuPDF, DOCX=mammoth,
-  HWPX=`hwpx.py`), 파일명의 "표지"/"내지"로 짝 맞추기(`pairing.py`). 아카이브는
+  HWPX=`hwpx.py`, 옛 HWP=`hwp5.py`), 파일명의 "표지"/"내지"로 짝 맞추기(`pairing.py`). 아카이브는
   `EBOOK_DATA_DIR`(기본 `ebook_data/`)에 원본 내지·원본 표지·표지 PNG·EPUB·meta.json 저장.
   웹 리더(`reader.py`): 서재의 EPUB을 서버에서 장 단위로 렌더(허용 태그만 남기는 sanitizer),
   글꼴/크기/테마/보기방식(스크롤·쪽 넘김) 설정은 브라우저 localStorage, 읽던 위치는 `progress` 테이블,
   책갈피·밑줄·메모는 `notes` 테이블(계정별)에 저장 - 밑줄 위치는 장 본문의 글자 오프셋이라 같은 EPUB을
   다시 변환하면 어긋날 수 있다. 메모 내용은 항상 textContent로만 그린다.
-  의존성은 `ebook/requirements.txt`, 샘플은 `ebook/samples/`. 스캔본(OCR)과 옛 .hwp/.doc는 미지원.
-  HWPX 파서는 한컴 구조를 흉내 낸 테스트 파일로만 검증됨 - 실제 한글 파일로 확인 필요.
+  의존성은 `ebook/requirements.txt`, 샘플은 `ebook/samples/`. 스캔본(OCR)과 옛 .doc는 미지원. 인쇄용 표지 PDF는 TrimBox로 재단선을 버리고
+  펼침면(뒤표지+책등+앞표지)이면 앞표지만 쓴다(`meta._render_front_cover`).
+  HWP 파서(`hwp5.py`)는 실제 문서 1개(표 포함 인쇄발주서)로, HWPX 파서는 한컴 구조를 흉내 낸
+  테스트 파일로만 검증됨 - HWP의 그림·각주·글상자는 아직 옮기지 않는다.
 - `tests/` - pytest 테스트 (슬롯 계산, 예약 충돌, 웹 플로우, 맛집 점수/영업상태).
 - `requirements.txt` - pinned dependencies (fastapi, uvicorn, anthropic, httpx,
   python-dotenv, jinja2, python-multipart).

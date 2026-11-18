@@ -12,12 +12,12 @@
     <div class="field">
       <label for="cover">표지 <span class="opt">선택</span></label>
       <input id="cover" name="cover" type="file" accept="image/*,.pdf">
-      <p class="hint">이미지(PNG, JPG, WEBP)나 PDF. PDF는 첫 쪽을 표지로 씁니다. 비워 두면 내지가 PDF일 때 내지의 첫 쪽이 표지가 됩니다.</p>
+      <p class="hint">이미지(PNG, JPG, WEBP)나 PDF. PDF는 첫 쪽을 표지로 쓰고, 인쇄용 펼침면(뒤표지+책등+앞표지)이면 재단선을 잘라 앞표지만 씁니다. 비워 두면 내지가 PDF일 때 내지의 첫 쪽이 표지가 됩니다.</p>
     </div>
     <div class="field">
       <label for="interior">내지</label>
-      <input id="interior" name="interior" type="file" accept=".pdf,.docx,.hwpx" required>
-      <p class="hint">PDF, 워드(DOCX), 한글(HWPX). 한글 파일이 .hwp라면 ‘다른 이름으로 저장’에서 HWPX나 PDF를 고르세요.</p>
+      <input id="interior" name="interior" type="file" accept=".pdf,.docx,.hwp,.hwpx" required>
+      <p class="hint">PDF, 워드(DOCX), 한글(HWP, HWPX). 옛 워드(.doc)라면 ‘다른 이름으로 저장’에서 DOCX나 PDF를 고르세요.</p>
     </div>
     <div class="field">
       <label for="title">제목 <span class="opt">선택</span></label>

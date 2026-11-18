@@ -22,7 +22,7 @@
         <noscript><button class="btn" type="submit">적용</button></noscript>
       </form>
       <form id="upload-form" method="post" action="/upload" enctype="multipart/form-data">
-        <input id="file-input" class="sr" type="file" name="files" accept=".pdf,.docx,.hwpx,image/*" multiple required>
+        <input id="file-input" class="sr" type="file" name="files" accept=".pdf,.docx,.hwp,.hwpx,image/*" multiple required>
         <label class="btn btn-primary" for="file-input" tabindex="0" role="button">파일 올리기</label>
       </form>
       <a class="btn" href="/new">표지·내지로 만들기</a>
@@ -55,7 +55,7 @@
     </li>
     {% else %}
     <li class="shelf-empty">
-      <p>{% if q %}‘{{ q }}’에 맞는 책이 없습니다.{% else %}아직 꽂힌 책이 없습니다. ‘파일 올리기’로 PDF, DOCX, HWPX를 넣어 보세요. 이름이 나의책_표지.png, 나의책_내지.docx처럼 표지와 내지로 끝나는 파일을 함께 고르면 한 권으로 묶입니다.{% endif %}</p>
+      <p>{% if q %}‘{{ q }}’에 맞는 책이 없습니다.{% else %}아직 꽂힌 책이 없습니다. ‘파일 올리기’로 PDF, DOCX, HWP, HWPX를 넣어 보세요. 이름이 나의책_표지.png, 나의책_내지.docx처럼 표지와 내지로 끝나는 파일을 함께 고르면 한 권으로 묶입니다.{% endif %}</p>
     </li>
     {% endfor %}
   </ul>

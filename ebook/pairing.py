@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROLE_RE = re.compile(r"표지|내지")
 SEPARATORS = " _-.()[]"
-BOOK_KINDS = {"pdf", "docx", "hwpx"}
+BOOK_KINDS = {"pdf", "docx", "hwp", "hwpx"}
 COVER_KINDS = {"image", "pdf"}
 
 
@@ -43,14 +43,14 @@ def split_role(stem: str) -> tuple[str | None, str]:
 
 
 def make_plans(files: list[Staged]) -> tuple[list[Plan], list[tuple[Staged, str]]]:
-    """(만들 책 목록, 거절된 파일과 사유 코드). 사유: hwp / bad / lone_cover / bad_cover"""
+    """(만들 책 목록, 거절된 파일과 사유 코드). 사유: doc / bad / lone_cover / bad_cover"""
     plans, rejected = [], []
     covers: dict[str, Staged] = {}
     interiors: dict[str, list[Staged]] = {}
 
     for f in files:
-        if f.kind == "hwp":
-            rejected.append((f, "hwp"))
+        if f.kind == "doc":
+            rejected.append((f, "doc"))
             continue
         role, key = split_role(Path(f.name).stem)
         if role == "표지":

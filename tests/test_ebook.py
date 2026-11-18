@@ -271,8 +271,8 @@ def test_sniff_by_content_not_name(tmp_path):
     assert meta.sniff(make_hwpx(tmp_path / "x.txt")) == "hwpx"
     assert meta.sniff(make_png(tmp_path / "x.jpg")) == "image"
     ole = tmp_path / "old.hwp"
-    ole.write_bytes(b"\xd0\xcf\x11\xe0" + b"0" * 100)
-    assert meta.sniff(ole) == "hwp"
+    ole.write_bytes(b"\xd0\xcf\x11\xe0" + b"0" * 100)  # 머리만 OLE인 깨진 파일
+    assert meta.sniff(ole) is None
     junk = tmp_path / "junk"
     junk.write_bytes(b"hello")
     assert meta.sniff(junk) is None
@@ -337,14 +337,16 @@ def test_make_plans_pairs_by_name_and_rejects_strays():
     files = [staged("나의책_표지.png", "image"), staged("나의책_내지.docx", "docx"),
              staged("둘째_내지.hwpx", "hwpx"), staged("둘째_표지.pdf", "pdf"),
              staged("그냥.pdf", "pdf"), staged("짝없음_표지.png", "image"),
-             staged("낡은.hwp", "hwp"), staged("사진.png", "image"), staged("메모_표지.docx", "docx")]
+             staged("낡은.doc", "doc"), staged("사진.png", "image"), staged("메모_표지.docx", "docx"),
+             staged("한글_내지.hwp", "hwp")]
     plans, rejected = pairing.make_plans(files)
     by_key = {p.key: p for p in plans}
     assert by_key["나의책"].cover.name == "나의책_표지.png"
     assert by_key["둘째"].cover.name == "둘째_표지.pdf"
     assert by_key[""].cover is None and by_key[""].interior.name == "그냥.pdf"
     assert dict((f.name, why) for f, why in rejected) == {
-        "낡은.hwp": "hwp", "사진.png": "bad", "메모_표지.docx": "bad_cover", "짝없음_표지.png": "lone_cover"}
+        "낡은.doc": "doc", "사진.png": "bad", "메모_표지.docx": "bad_cover", "짝없음_표지.png": "lone_cover"}
+    assert by_key["한글"].interior.kind == "hwp" and by_key["한글"].cover is None
 
 
 def test_make_plans_unnamed_pair():
@@ -383,9 +385,9 @@ def test_upload_reports_hwp_and_lone_cover(tmp_path):
     old.write_bytes(b"\xd0\xcf\x11\xe0" + b"0" * 64)
     cover = make_png(tmp_path / "c.png")
     res = upload_many(client, [("낡은.hwp", old), ("혼자_표지.png", cover)])
-    assert res.headers["location"] == "/library?added=0&why=hwp,lone_cover"
+    assert res.headers["location"] == "/library?added=0&why=bad,lone_cover"  # 깨진 파일은 형식을 알 수 없다
     page = client.get(res.headers["location"]).text
-    assert "HWPX나 PDF로 저장" in page and "짝이 되는 내지가 없는 표지" in page
+    assert "HWP, HWPX가 아니거나" in page and "짝이 되는 내지가 없는 표지" in page
 
 
 def test_new_form_builds_book_from_cover_pdf_and_hwpx(tmp_path):
@@ -417,7 +419,7 @@ def test_new_form_errors(tmp_path):
     old.write_bytes(b"\xd0\xcf\x11\xe0" + b"0" * 64)
     with open(old, "rb") as f:
         res = client.post("/new", files={"interior": ("x.hwp", f)})
-    assert res.status_code == 400 and "HWPX나 PDF로 저장" in res.text
+    assert res.status_code == 400 and "내지는 PDF, DOCX, HWP, HWPX만" in res.text
     with open(make_docx(tmp_path / "b.docx"), "rb") as b, open(make_docx(tmp_path / "w.docx"), "rb") as w:
         res = client.post("/new", files={"interior": ("b.docx", b), "cover": ("w.docx", w)})
     assert res.status_code == 400 and "표지는 이미지(PNG" in res.text
@@ -606,3 +608,90 @@ def test_notes_removed_with_book(tmp_path):
     client.post("/book/1/delete")
     with db.get_conn() as conn:
         assert conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0] == 0
+
+
+# ================================================================ 옛 한글(.hwp) 레코드 해석 / 펼침면 표지
+
+def rec(tag, level, body=b""):
+    import struct
+    head = tag | (level << 10) | (min(len(body), 0xFFF) << 20)
+    return struct.pack("<I", head) + (struct.pack("<I", len(body)) if len(body) >= 0xFFF else b"") + body
+
+
+def hwp_para(level, text, style=0, shape=0):
+    import struct
+    header = struct.pack("<IIHB", len(text), 0, 0, style) + b"\x00" * 13   # 스타일 번호는 10번째 바이트
+    body = text.encode("utf-16le") + b"\r\x00"
+    return (rec(66, level, header) + rec(67, level + 1, body)
+            + rec(68, level + 1, struct.pack("<II", 0, shape)))
+
+
+def hwp_cell(level, col, row, text, colspan=1, rowspan=1):
+    import struct
+    return rec(72, level, struct.pack("<8H", 1, 0, 0, 0, col, row, colspan, rowspan) + b"\x00" * 31) + hwp_para(level, text)
+
+
+def test_hwp5_text_extraction_skips_controls():
+    from ebook import hwp5
+    wide = b"\x0b\x00" + b"\x00" * 14                      # 표/그림 자리 표시 컨트롤은 16바이트
+    tab = b"\x09\x00" + b"\x00" * 14                       # 탭도 16바이트 컨트롤이다
+    raw = "앞 글".encode("utf-16le") + wide + tab + "뒤 글".encode("utf-16le") + b"\x0a\x00" + "줄".encode("utf-16le") + b"\r\x00"
+    assert hwp5.para_text(raw) == "앞 글 뒤 글\n줄"
+
+
+def test_hwp5_section_headings_tables_and_header_footer():
+    from ebook import hwp5
+    data = (
+        hwp_para(0, "서문", style=1)
+        + hwp_para(0, "본문 한 줄")
+        + rec(66, 0, b"\x00" * 24) + rec(71, 1, b"daeh" + b"\x00" * 8)        # 머리말 안쪽은 본문이 아니다
+        + hwp_para(2, "쪽 머리말") + rec(72, 2, b"\x00" * 30)
+        + rec(66, 0, b"\x00" * 24) + rec(71, 1, b" lbt" + b"\x00" * 40) + rec(77, 2, b"\x00" * 14)
+        + hwp_cell(2, 0, 0, "칸 가", colspan=2) + hwp_cell(2, 0, 1, "칸 나") + hwp_cell(2, 1, 1, "칸 다")
+        + hwp_para(0, "표 다음 글")
+    )
+    blocks, _ = hwp5._read_section(data, ["바탕글", "개요 1"], [1000])
+    kinds = [b[0] for b in blocks]
+    assert kinds == ["para", "para", "table", "para"]
+    assert (blocks[0][2], blocks[0][3]) == (1, "서문") and blocks[1][2] == 0   # 개요 스타일만 제목
+    table = blocks[2][1]
+    assert 'colspan="2"' in table and table.count("<tr>") == 2 and "칸 다" in table
+    assert "머리말" not in str(blocks) and blocks[3][3] == "표 다음 글"
+
+
+def test_hwp5_rejects_non_hwp_and_missing_file(tmp_path):
+    from ebook import hwp5
+    junk = tmp_path / "x.hwp"
+    junk.write_bytes(b"\xd0\xcf\x11\xe0" + b"0" * 64)
+    with pytest.raises(meta.SourceError):
+        hwp5.read_blocks(junk)
+
+
+def make_spread_cover(path):
+    doc = pymupdf.open()
+    page = doc.new_page(width=1130, height=802)
+    page.draw_rect(pymupdf.Rect(0, 0, 565, 802), color=None, fill=(1, 0, 0))     # 뒤표지 쪽: 빨강
+    page.draw_rect(pymupdf.Rect(565, 0, 1130, 802), color=None, fill=(0, 0, 1))  # 앞표지 쪽: 파랑
+    page.draw_rect(pymupdf.Rect(0, 0, 30, 30), color=None, fill=(0, 0, 0))        # 재단선 밖 표식
+    page.set_trimbox(pymupdf.Rect(37, 37, 1093, 765))
+    doc.save(path)
+    return path
+
+
+def test_spread_cover_pdf_keeps_only_front_cover(tmp_path):
+    from PIL import Image
+    out = tmp_path / "c.png"
+    meta.cover_from_upload(make_spread_cover(tmp_path / "spread.pdf"), "pdf", out)
+    with Image.open(out) as img:
+        img = img.convert("RGB")
+        assert abs(img.width / img.height - meta.FRONT_COVER_RATIO) < 0.01
+        assert img.getpixel((5, 5)) == (0, 0, 255) and img.getpixel((img.width - 5, img.height // 2)) == (0, 0, 255)
+        assert all(img.getpixel((x, y)) == (0, 0, 255) for x in (5, img.width // 2) for y in (5, img.height - 5))
+
+
+def test_single_page_cover_pdf_is_not_cropped(tmp_path):
+    from PIL import Image
+    out = tmp_path / "c.png"
+    meta.cover_from_upload(make_pdf(tmp_path / "plain.pdf"), "pdf", out)   # 세로 A4
+    with Image.open(out) as img:
+        assert abs(img.width / img.height - 595 / 842) < 0.01

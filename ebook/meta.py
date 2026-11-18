@@ -5,11 +5,14 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
 
+import olefile
 import pymupdf
 from PIL import Image, ImageOps
 
 COVER_WIDTH = 600
 UPLOAD_COVER_MAX_WIDTH = 900
+SPREAD_ASPECT = 1.25      # 재단 영역이 이보다 가로로 넓으면 뒤표지+책등+앞표지 펼침면으로 본다
+FRONT_COVER_RATIO = 0.705  # 앞표지 가로/세로 (B5, 국판, A4 등 흔한 판형의 값)
 
 
 class SourceError(Exception):
@@ -24,8 +27,13 @@ def sniff(path: Path) -> str | None:
         head = f.read(8)
     if head.startswith(b"%PDF-"):
         return "pdf"
-    if head.startswith(b"\xd0\xcf\x11\xe0"):
-        return "hwp"  # 옛 한글(.hwp)과 옛 워드(.doc)는 같은 OLE 형식이다
+    if head.startswith(b"\xd0\xcf\x11\xe0"):  # 옛 한글(.hwp)과 옛 워드(.doc)는 같은 OLE 컨테이너다
+        from ebook import hwp5  # hwp5가 이 모듈의 SourceError를 쓰므로 늦게 가져온다
+        try:
+            with olefile.OleFileIO(path) as ole:
+                return "hwp" if hwp5.is_hwp(ole) else "doc"
+        except OSError:
+            return None
     if head.startswith(b"PK"):
         try:
             with zipfile.ZipFile(path) as zf:
@@ -54,7 +62,7 @@ def cover_from_upload(src: Path, kind: str, out: Path) -> None:
             with pymupdf.open(src) as doc:
                 if doc.needs_pass or doc.page_count == 0:
                     raise SourceError("표지 PDF를 열 수 없습니다.")
-                _render_first_page(doc, out)
+                _render_front_cover(doc[0], out)
         elif kind == "image":
             with Image.open(src) as img:
                 img = ImageOps.exif_transpose(img).convert("RGB")
@@ -68,6 +76,17 @@ def cover_from_upload(src: Path, kind: str, out: Path) -> None:
         raise
     except Exception as exc:
         raise SourceError("표지 파일을 열 수 없습니다.") from exc
+
+
+def _render_front_cover(page: pymupdf.Page, out: Path) -> None:
+    """인쇄용 표지 PDF를 전자책 표지로: TrimBox로 재단선·색 띠를 버리고, 펼침면이면 오른쪽 앞표지만 쓴다."""
+    clip = page.trimbox & page.rect
+    if clip.is_empty:
+        clip = page.rect
+    if clip.width / clip.height > SPREAD_ASPECT:  # 좌철(가로쓰기) 책은 앞표지가 오른쪽에 있다
+        clip = pymupdf.Rect(clip.x1 - clip.height * FRONT_COVER_RATIO, clip.y0, clip.x1, clip.y1)
+    zoom = UPLOAD_COVER_MAX_WIDTH / clip.width
+    page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), clip=clip).save(out)
 
 
 def _render_first_page(doc: pymupdf.Document, out: Path) -> None:
@@ -104,6 +123,8 @@ def extract(path: Path, kind: str, fallback_title: str, cover_path: Path | None 
         return _extract_docx(path, fallback_title)
     if kind == "hwpx":
         return _extract_hwpx(path, fallback_title)
+    if kind == "hwp":
+        return _extract_hwp(path, fallback_title)
     raise SourceError("지원하지 않는 내지 형식입니다.")
 
 
@@ -181,5 +202,15 @@ def _extract_hwpx(path: Path, fallback_title: str) -> dict:
         raise SourceError("HWPX 파일을 열 수 없습니다. 손상된 파일일 수 있습니다.") from exc
     info = _blank_info(clean_title(raw["title"], fallback_title))
     info.update({k: raw[k] for k in ("author", "subject", "keywords", "created", "modified")})
+    info["creator"] = "한글"
+    return info
+
+
+def _extract_hwp(path: Path, fallback_title: str) -> dict:
+    from ebook import hwp5
+    raw = hwp5.read_meta(path)
+    info = _blank_info(clean_title(raw["title"], fallback_title))
+    info.update({k: raw[k] for k in ("author", "subject", "keywords", "created", "modified")})
+    info["keywords"] = info["keywords"].strip()
     info["creator"] = "한글"
     return info

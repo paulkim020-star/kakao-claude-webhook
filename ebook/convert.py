@@ -1,4 +1,4 @@
-"""내지(PDF / DOCX / HWPX) -> EPUB 변환 (오프라인).
+"""내지(PDF / DOCX / HWP / HWPX) -> EPUB 변환 (오프라인).
 
 추출(extract_*)과 EPUB 조립(write_epub)을 나눠서, 내지 형식이 늘어도 조립부는 하나다.
 
@@ -6,6 +6,7 @@
          목차(1단계)가 있으면 그것을, 없으면 큰 제목(h1)을 쓴다. 쪽 번호는 버린다.
   DOCX : mammoth로 HTML(제목/표/목록/그림)을 만들고 h1(없으면 h2)에서 챕터를 나눈다.
   HWPX : ebook/hwpx.py가 뽑은 블록을 같은 방식으로 나눈다.
+  HWP  : ebook/hwp5.py(옛 한글 바이너리)가 뽑은 블록을 같은 방식으로 나눈다.
 
 글자가 없는 스캔 PDF는 변환하지 않는다 (OCR 미지원).
 """
@@ -23,7 +24,7 @@ from ebooklib import epub
 from lxml import etree
 from lxml import html as lxml_html
 
-from ebook import hwpx
+from ebook import hwp5, hwpx
 from ebook.meta import SourceError
 
 H1_RATIO = 1.5
@@ -148,11 +149,18 @@ def _sample(blocks) -> str:
     return " ".join(text for _, _, text in blocks if text)[:5000]
 
 
-def extract_hwpx(path: Path, title: str) -> Book:
-    blocks, images = hwpx.read_blocks(path)
+def _book_from_blocks(blocks, images, title: str) -> Book:
     if not any(text for _, _, text in blocks):
         raise SourceError("본문 글자를 찾지 못했습니다.")
     return Book(split_chapters(blocks, title), images, _sample(blocks))
+
+
+def extract_hwpx(path: Path, title: str) -> Book:
+    return _book_from_blocks(*hwpx.read_blocks(path), title)
+
+
+def extract_hwp(path: Path, title: str) -> Book:
+    return _book_from_blocks(*hwp5.read_blocks(path), title)
 
 
 def extract_docx(path: Path, title: str) -> Book:
@@ -240,6 +248,8 @@ def to_epub(source: Path, epub_path: Path, kind: str, title: str, author: str,
         book = extract_docx(source, title)
     elif kind == "hwpx":
         book = extract_hwpx(source, title)
+    elif kind == "hwp":
+        book = extract_hwp(source, title)
     else:
         raise SourceError("지원하지 않는 내지 형식입니다.")
     return write_epub(book, epub_path, title, author, cover_path)
