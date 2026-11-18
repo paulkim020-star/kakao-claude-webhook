@@ -534,3 +534,75 @@ def test_reader_page_mode_controls_and_explicit_position(tmp_path):
     assert 'data-resume="0"' in client.get("/book/1/read?c=0&r=-5").text or 'data-resume="0.0"' in client.get("/book/1/read?c=0&r=-5").text
     client.post("/book/1/progress", json={"chapter": 0, "ratio": 0.6, "percent": 30})
     assert 'data-resume="0.25"' in client.get("/book/1/read?c=0&r=0.25").text  # 지정이 저장 위치보다 우선
+
+
+# ================================================================ 책갈피 / 밑줄 / 메모
+
+def test_notes_crud_and_summary(tmp_path):
+    client = signup()
+    upload(client, make_pdf(tmp_path / "a.pdf"))
+    assert client.get("/book/1/notes").json() == []
+
+    hl = client.post("/book/1/notes", json={"kind": "highlight", "chapter": 0, "start": 5, "end": 20,
+                                             "text": "고른 글", "color": "pink"})
+    assert hl.status_code == 201 and hl.json()["color"] == "pink" and hl.json()["note"] == ""
+    bm = client.post("/book/1/notes", json={"kind": "bookmark", "chapter": 1, "ratio": 0.4, "text": "여기"}).json()
+    assert bm["kind"] == "bookmark" and bm["ratio"] == 0.4
+
+    edited = client.patch(f"/book/1/notes/{hl.json()['id']}", json={"note": "나중에 다시 보기", "color": "green"}).json()
+    assert (edited["note"], edited["color"]) == ("나중에 다시 보기", "green")
+    only_color = client.patch(f"/book/1/notes/{hl.json()['id']}", json={"color": "yellow"}).json()
+    assert only_color["note"] == "나중에 다시 보기" and only_color["color"] == "yellow"
+
+    listed = client.get("/book/1/notes").json()
+    assert [n["kind"] for n in listed] == ["highlight", "bookmark"]  # 장 순서
+    assert "책갈피 1개 · 밑줄 1개 · 메모 1개" in client.get("/book/1").text
+
+    assert client.delete(f"/book/1/notes/{bm['id']}").status_code == 204
+    assert [n["kind"] for n in client.get("/book/1/notes").json()] == ["highlight"]
+    assert client.delete(f"/book/1/notes/{bm['id']}").status_code == 404
+
+
+def test_notes_validation(tmp_path):
+    client = signup()
+    upload(client, make_pdf(tmp_path / "a.pdf"))
+    bad = [
+        {"kind": "highlight", "chapter": 0, "start": 5, "end": 5, "text": "x"},          # 빈 범위
+        {"kind": "highlight", "chapter": 0, "start": 1, "end": 9, "text": "   "},        # 빈 글
+        {"kind": "highlight", "chapter": 0, "start": 1, "end": 9, "text": "x", "color": "purple"},
+        {"kind": "bookmark", "chapter": 0, "ratio": 3},
+        {"kind": "other", "chapter": 0},
+        {"kind": "highlight", "chapter": -1, "start": 1, "end": 2, "text": "x"},
+        {"kind": "highlight", "chapter": 0, "start": 1, "end": 9, "text": "x" * 2001},
+    ]
+    for payload in bad:
+        assert client.post("/book/1/notes", json=payload).status_code == 422, payload
+    assert client.get("/book/1/notes").json() == []
+
+
+def test_notes_are_private_and_text_is_data_only(tmp_path):
+    alice = signup("alice")
+    upload(alice, make_pdf(tmp_path / "a.pdf"))
+    evil = "<script>alert(1)</script>"
+    note = alice.post("/book/1/notes", json={"kind": "highlight", "chapter": 0, "start": 0, "end": 3,
+                                              "text": evil, "note": evil}).json()
+    assert alice.get("/book/1/notes").json()[0]["note"] == evil  # JSON으로만 돌려준다 (HTML에 끼워 넣지 않는다)
+    assert evil not in alice.get("/book/1/read?c=0").text         # 리더 HTML에는 메모 내용이 없다
+
+    bob = signup("bob")
+    assert bob.get("/book/1/notes").status_code == 404
+    assert bob.post("/book/1/notes", json={"kind": "bookmark", "chapter": 0}).status_code == 404
+    assert bob.patch(f"/book/1/notes/{note['id']}", json={"note": "x"}).status_code == 404
+    assert bob.delete(f"/book/1/notes/{note['id']}").status_code == 404
+    anon = TestClient(app)
+    assert anon.get("/book/1/notes").status_code == 401
+    assert alice.get("/book/1/notes").json()[0]["id"] == note["id"]  # 남이 건드리지 못했다
+
+
+def test_notes_removed_with_book(tmp_path):
+    client = signup()
+    upload(client, make_pdf(tmp_path / "a.pdf"))
+    client.post("/book/1/notes", json={"kind": "bookmark", "chapter": 0, "ratio": 0.1})
+    client.post("/book/1/delete")
+    with db.get_conn() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0] == 0

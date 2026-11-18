@@ -25,7 +25,9 @@ skill response JSON format (`simpleText`) and returned.
   HWPX=`hwpx.py`), 파일명의 "표지"/"내지"로 짝 맞추기(`pairing.py`). 아카이브는
   `EBOOK_DATA_DIR`(기본 `ebook_data/`)에 원본 내지·원본 표지·표지 PNG·EPUB·meta.json 저장.
   웹 리더(`reader.py`): 서재의 EPUB을 서버에서 장 단위로 렌더(허용 태그만 남기는 sanitizer),
-  글꼴/크기/테마 설정은 브라우저 localStorage, 읽던 위치는 `progress` 테이블(계정별)에 저장.
+  글꼴/크기/테마/보기방식(스크롤·쪽 넘김) 설정은 브라우저 localStorage, 읽던 위치는 `progress` 테이블,
+  책갈피·밑줄·메모는 `notes` 테이블(계정별)에 저장 - 밑줄 위치는 장 본문의 글자 오프셋이라 같은 EPUB을
+  다시 변환하면 어긋날 수 있다. 메모 내용은 항상 textContent로만 그린다.
   의존성은 `ebook/requirements.txt`, 샘플은 `ebook/samples/`. 스캔본(OCR)과 옛 .hwp/.doc는 미지원.
   HWPX 파서는 한컴 구조를 흉내 낸 테스트 파일로만 검증됨 - 실제 한글 파일로 확인 필요.
 - `tests/` - pytest 테스트 (슬롯 계산, 예약 충돌, 웹 플로우, 맛집 점수/영업상태).

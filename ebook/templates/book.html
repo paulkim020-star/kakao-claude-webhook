@@ -36,6 +36,10 @@
       </form>
     </div>
 
+    {% if marks.bookmarks or marks.highlights %}
+    <p class="hint marks">내 기록: 책갈피 {{ marks.bookmarks }}개 · 밑줄 {{ marks.highlights }}개 · 메모 {{ marks.memos }}개</p>
+    {% endif %}
+
     <h2>파일 속성</h2>
     <dl class="props">
       <div><dt>내지 형식</dt><dd>{{ book.source_type|upper }}</dd></div>

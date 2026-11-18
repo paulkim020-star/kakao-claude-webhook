@@ -298,9 +298,14 @@ def book_page(request: Request, book_id: int):
         book = _own_book(conn, user["id"], book_id)
         progress = conn.execute("SELECT percent FROM progress WHERE user_id = ? AND book_id = ?",
                                 (user["id"], book_id)).fetchone()
+        counts = {r["kind"]: (r["n"], r["memos"]) for r in conn.execute(
+            "SELECT kind, COUNT(*) AS n, SUM(note != '') AS memos FROM notes"
+            " WHERE user_id = ? AND book_id = ? GROUP BY kind", (user["id"], book_id))}
     return templates.TemplateResponse(request, "book.html", {
         "user": user, "book": book, "info": json.loads(book["meta_json"]),
         "percent": round(progress["percent"]) if progress else 0,
+        "marks": {"bookmarks": counts.get("bookmark", (0, 0))[0], "highlights": counts.get("highlight", (0, 0))[0],
+                  "memos": counts.get("highlight", (0, 0))[1] or 0},
         "converting": book["status"] == "converting",
     })
 

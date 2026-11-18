@@ -110,6 +110,7 @@
   }
   function closeAll() {
     toggle(toc, tocBtn, false); toggle(set, setBtn, false); scrim.classList.remove("open");
+    document.dispatchEvent(new Event("reader:closeall"));
   }
   tocBtn.addEventListener("click", function () {
     var open = !toc.classList.contains("open"); closeAll();
@@ -125,6 +126,7 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") { closeAll(); return; }
     if (e.altKey || e.ctrlKey || e.metaKey || /input|textarea|select|button/i.test(e.target.tagName)) return;
+    if (document.querySelector(".popover.open, .drawer.open")) return;
     if (paged) {
       if (e.key === "ArrowRight" || e.key === "PageDown" || (e.key === " " && !e.shiftKey)) { e.preventDefault(); turn(1, false); }
       else if (e.key === "ArrowLeft" || e.key === "PageUp" || (e.key === " " && e.shiftKey)) { e.preventDefault(); turn(-1, false); }
@@ -143,7 +145,7 @@
     down = null;
     if (String(window.getSelection())) return;           // 글자를 고르는 중에는 넘기지 않는다
     if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) { turn(dx < 0 ? 1 : -1, true); return; }
-    if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && dt < 350 && !e.target.closest("a, button")) {
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && dt < 350 && !e.target.closest("a, button, mark")) {
       var x = e.clientX / window.innerWidth;
       if (x < 0.3) turn(-1, true); else if (x > 0.7) turn(1, true); else bar.classList.toggle("hide");
     }
@@ -188,14 +190,35 @@
   window.addEventListener("resize", function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(relayout, 150); });
 
   /* ---------- 시작: 그림이 다 불러와진 뒤 위치를 맞춘다 ---------- */
-  window.readerApi = { // 책갈피·메모 스크립트가 쓰는 연결부
-    get paged() { return paged; }, ratio: ratio, relayout: relayout,
-    jumpToY: function (y) {   // 본문 안의 세로 위치(문서 기준)로 이동
-      if (!paged) { window.scrollTo(0, y - 120); return; }
-      var x = y;               // 쪽 넘김에서는 y 대신 가로 위치를 받는다
-      goPage(Math.floor(x / step), false);
+  function visibleText() {   // 지금 화면 맨 위의 글 (책갈피 설명용)
+    var r = paged ? stage.getBoundingClientRect() : { left: 0, right: window.innerWidth, top: 70, bottom: window.innerHeight };
+    var blocks = prose.querySelectorAll("#chapter-body p, #chapter-body h1, #chapter-body h2, #chapter-body h3, #chapter-body li, #chapter-body td");
+    for (var i = 0; i < blocks.length; i++) {
+      var rects = blocks[i].getClientRects();
+      for (var k = 0; k < rects.length; k++) {
+        var q = rects[k];
+        if (q.right > r.left && q.left < r.right && q.bottom > r.top + 4 && q.top < r.bottom) {
+          var text = blocks[i].textContent.replace(/\s+/g, " ").trim();
+          if (text) return text.slice(0, 60);
+        }
+      }
+    }
+    return "";
+  }
+  window.readerApi = {   // 책갈피·메모 스크립트(notes.js)가 쓰는 연결부
+    get paged() { return paged; },
+    chapter: chapter, ratio: ratio, visibleText: visibleText, closeAll: closeAll, scrim: scrim,
+    openPanel: function (panel, btn) { closeAll(); toggle(panel, btn, true); scrim.classList.add("open"); },
+    closePanel: function (panel, btn) { toggle(panel, btn, false); scrim.classList.remove("open"); },
+    goRatio: function (r) {
+      if (paged) goPage(Math.round(r * (pages - 1)), false);
+      else window.scrollTo(0, r * (document.documentElement.scrollHeight - window.innerHeight));
     },
-    goPage: goPage, pageStep: function () { return step; }, proseEl: prose,
+    jumpTo: function (el) {   // 글 조각이 있는 자리로 (스크롤은 가운데로, 쪽 넘김은 그 쪽으로)
+      if (!paged) { el.scrollIntoView({ block: "center" }); return; }
+      var rect = el.getClientRects()[0];
+      goPage(Math.floor((rect.left - prose.getBoundingClientRect().left) / step + 0.001), false);
+    },
   };
   if (get("mode") === "page") setMode("page", resume);
   window.addEventListener("load", function () {

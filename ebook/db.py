@@ -44,6 +44,21 @@ CREATE TABLE IF NOT EXISTS progress (          -- 리더에서 읽던 위치 (�
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, book_id)
 );
+CREATE TABLE IF NOT EXISTS notes (             -- 리더의 책갈피 / 밑줄(+메모)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,                        -- highlight / bookmark
+    chapter INTEGER NOT NULL,
+    start_off INTEGER NOT NULL DEFAULT 0,      -- highlight: 장 본문 글자 위치 [start, end)
+    end_off INTEGER NOT NULL DEFAULT 0,
+    text TEXT NOT NULL DEFAULT '',             -- highlight: 고른 글 / bookmark: 그 자리의 글 일부
+    note TEXT NOT NULL DEFAULT '',
+    color TEXT NOT NULL DEFAULT 'yellow',
+    ratio REAL NOT NULL DEFAULT 0,             -- bookmark: 장 안에서의 위치 0~1
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_notes_book ON notes(user_id, book_id);
 """
 
 

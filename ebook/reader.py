@@ -11,6 +11,7 @@ import posixpath
 import re
 import zipfile
 from dataclasses import dataclass
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
@@ -175,4 +176,91 @@ def save_progress(request: Request, book_id: int, body: Progress):
             " ON CONFLICT(user_id, book_id) DO UPDATE SET chapter = excluded.chapter,"
             " ratio = excluded.ratio, percent = excluded.percent, updated_at = CURRENT_TIMESTAMP",
             (user["id"], book_id, body.chapter, body.ratio, body.percent))
+    return Response(status_code=204)
+
+
+# ------------------------------------------------------------------ 책갈피 / 밑줄 / 메모
+
+Color = Literal["yellow", "green", "pink"]
+
+
+class NoteIn(BaseModel):
+    kind: Literal["highlight", "bookmark"]
+    chapter: int = Field(ge=0, le=100000)
+    start: int = Field(0, ge=0, le=10_000_000)
+    end: int = Field(0, ge=0, le=10_000_000)
+    text: str = Field("", max_length=2000)
+    note: str = Field("", max_length=2000)
+    color: Color = "yellow"
+    ratio: float = Field(0, ge=0, le=1)
+
+
+class NotePatch(BaseModel):
+    note: str | None = Field(None, max_length=2000)
+    color: Color | None = None
+
+
+def _note_dict(row) -> dict:
+    return {"id": row["id"], "kind": row["kind"], "chapter": row["chapter"], "start": row["start_off"],
+            "end": row["end_off"], "text": row["text"], "note": row["note"], "color": row["color"],
+            "ratio": row["ratio"]}
+
+
+def _own_note(conn, user_id: int, book_id: int, note_id: int):
+    row = conn.execute("SELECT * FROM notes WHERE id = ? AND user_id = ? AND book_id = ?",
+                       (note_id, user_id, book_id)).fetchone()
+    if row is None:
+        raise HTTPException(404, "메모를 찾을 수 없습니다.")
+    return row
+
+
+def _note_user(request: Request):
+    user = current_user(request)
+    if user is None:
+        raise HTTPException(401)
+    return user
+
+
+@router.get("/book/{book_id}/notes")
+def list_notes(request: Request, book_id: int):
+    user = _note_user(request)
+    with get_conn() as conn:
+        _own_book(conn, user["id"], book_id)
+        rows = conn.execute("SELECT * FROM notes WHERE user_id = ? AND book_id = ?"
+                            " ORDER BY chapter, start_off, ratio, id", (user["id"], book_id)).fetchall()
+    return [_note_dict(r) for r in rows]
+
+
+@router.post("/book/{book_id}/notes", status_code=201)
+def add_note(request: Request, book_id: int, body: NoteIn):
+    user = _note_user(request)
+    if body.kind == "highlight" and (body.end <= body.start or not body.text.strip()):
+        raise HTTPException(422, "표시할 글을 고르지 않았습니다.")
+    with get_conn() as conn:
+        _own_book(conn, user["id"], book_id)
+        note_id = conn.execute(
+            "INSERT INTO notes (user_id, book_id, kind, chapter, start_off, end_off, text, note, color, ratio)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (user["id"], book_id, body.kind, body.chapter, body.start, body.end, body.text, body.note,
+             body.color, body.ratio)).lastrowid
+        return _note_dict(_own_note(conn, user["id"], book_id, note_id))
+
+
+@router.patch("/book/{book_id}/notes/{note_id}")
+def edit_note(request: Request, book_id: int, note_id: int, body: NotePatch):
+    user = _note_user(request)
+    with get_conn() as conn:
+        row = _own_note(conn, user["id"], book_id, note_id)
+        conn.execute("UPDATE notes SET note = ?, color = ? WHERE id = ?",
+                     (row["note"] if body.note is None else body.note,
+                      body.color or row["color"], note_id))
+        return _note_dict(_own_note(conn, user["id"], book_id, note_id))
+
+
+@router.delete("/book/{book_id}/notes/{note_id}", status_code=204)
+def delete_note(request: Request, book_id: int, note_id: int):
+    user = _note_user(request)
+    with get_conn() as conn:
+        _own_note(conn, user["id"], book_id, note_id)
+        conn.execute("DELETE FROM notes WHERE id = ?", (note_id,))
     return Response(status_code=204)

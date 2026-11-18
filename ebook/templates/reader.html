@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/reader.css">
   <script src="/static/reader.js" defer></script>
+  <script src="/static/notes.js" defer></script>
 </head>
 <body class="reader" data-book="{{ book.id }}" data-chapter="{{ index }}" data-total="{{ total }}"
       data-start="{{ start }}" data-span="{{ span }}" data-resume="{{ resume }}">
@@ -25,10 +26,12 @@
   <div class="r-progress" aria-hidden="true"><span id="r-fill"></span></div>
 
   <header class="r-bar" id="bar">
-    <a class="r-btn" href="/book/{{ book.id }}">← 책 정보</a>
+    <a class="r-btn icon-lbl" href="/book/{{ book.id }}" aria-label="책 정보로 돌아가기">←<span class="lbl">&nbsp;책 정보</span></a>
     <p class="r-title"><strong>{{ book.title }}</strong></p>
     <span class="r-percent" id="r-percent" aria-live="off"></span>
     <button class="r-btn" id="toc-btn" type="button" aria-expanded="false" aria-controls="toc">목차</button>
+    <button class="r-btn" id="bm-btn" type="button">책갈피</button>
+    <button class="r-btn" id="notes-btn" type="button" aria-expanded="false" aria-controls="notes-panel">메모</button>
     <button class="r-btn" id="set-btn" type="button" aria-expanded="false" aria-controls="settings">글자 설정</button>
   </header>
 
@@ -64,6 +67,36 @@
       {% endfor %}
     </ol>
   </aside>
+
+  <aside class="drawer right" id="notes-panel" aria-label="책갈피와 메모" inert>
+    <h2>책갈피·메모</h2>
+    <p class="hint" id="notes-empty">글을 드래그하면 밑줄과 메모를 남길 수 있고, 위쪽 ‘책갈피’로 지금 위치를 꽂아 둘 수 있습니다.</p>
+    <div id="notes-list"></div>
+  </aside>
+
+  <div class="sel-bar" id="sel-bar" role="toolbar" aria-label="선택한 글 표시" hidden>
+    <button type="button" class="dot dot-yellow" data-color="yellow" aria-label="노랑으로 밑줄"></button>
+    <button type="button" class="dot dot-green" data-color="green" aria-label="초록으로 밑줄"></button>
+    <button type="button" class="dot dot-pink" data-color="pink" aria-label="분홍으로 밑줄"></button>
+    <button type="button" class="sel-memo" data-memo>메모 달기</button>
+  </div>
+
+  <section class="popover note-pop" id="note-pop" aria-label="메모" inert>
+    <p class="note-quote" id="note-quote"></p>
+    <label class="sr" for="note-text">메모</label>
+    <textarea id="note-text" rows="4" maxlength="2000" placeholder="메모를 적어 두세요"></textarea>
+    <div class="note-colors" role="group" aria-label="밑줄 색">
+      <button type="button" class="dot dot-yellow" data-pop-color="yellow" aria-label="노랑" aria-pressed="false"></button>
+      <button type="button" class="dot dot-green" data-pop-color="green" aria-label="초록" aria-pressed="false"></button>
+      <button type="button" class="dot dot-pink" data-pop-color="pink" aria-label="분홍" aria-pressed="false"></button>
+    </div>
+    <div class="note-actions">
+      <button type="button" class="btn btn-primary" id="note-save">저장</button>
+      <button type="button" class="link-btn danger" id="note-del">밑줄 지우기</button>
+    </div>
+  </section>
+
+  <p class="toast" id="toast" role="status" aria-live="polite"></p>
 
   <section class="popover" id="settings" aria-label="글자 설정" inert>
     <div class="set-row">
