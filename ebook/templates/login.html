@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ "계정 만들기" if mode == "register" else "로그인" }} · PDF 서재{% endblock %}
 {% block body %}
+<div class="auth-page">
 <main id="main" class="auth">
-  <p class="brand">PDF 서재</p>
+  <p class="brand"><svg class="logo" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="5" width="5" height="15" rx="1"/><rect x="9" y="2" width="5" height="18" rx="1"/><rect x="16" y="7" width="4" height="13" rx="1"/></svg>PDF 서재</p>
   <h1>{{ "계정 만들기" if mode == "register" else "서재에 들어가기" }}</h1>
   <p class="lead">
     PDF를 올리면 EPUB으로 바꿔서 책장에 꽂아 둡니다.
@@ -26,4 +27,18 @@
     {% else %}처음이신가요? <a href="/register">계정 만들기</a>{% endif %}
   </p>
 </main>
+
+<div class="preview" aria-hidden="true">
+  {% macro spine(title, cls, w, h, extra="") %}<span class="spine {{ cls }} {{ extra }}" style="--w: {{ w }}px; --h: {{ h }}px">{{ title }}</span>{% endmacro %}
+  <div class="preview-row">
+    {{ spine("소설", "c0", 38, 188) }}{{ spine("시집", "c1", 30, 160) }}{{ spine("여행", "c2", 44, 200) }}
+    {{ spine("에세이", "c4", 34, 176) }}{{ spine("논문", "c5", 52, 150) }}{{ spine("요리", "c3", 36, 190) }}
+    {{ spine("역사", "c2", 42, 205) }}{{ spine("수필", "c1", 30, 168, "lean") }}
+  </div>
+  <div class="preview-row">
+    {{ spine("그림책", "c3", 46, 160) }}{{ spine("사진", "c0", 32, 182) }}{{ spine("만화", "c4", 36, 150) }}
+    {{ spine("자서전", "c5", 40, 172) }}{{ spine("기록", "c2", 30, 140) }}{{ spine("일기", "c1", 34, 166) }}
+  </div>
+</div>
+</div>
 {% endblock %}

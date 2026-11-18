@@ -1,20 +1,8 @@
 {% extends "base.html" %}
 {% block title %}내 서재 · PDF 서재{% endblock %}
 {% block body %}
-<header class="topbar">
-  <div class="wrap topbar-in">
-    <a class="brand" href="/library">PDF 서재</a>
-    <form class="search" method="get" action="/library" role="search">
-      <label class="sr" for="q">제목이나 저자로 찾기</label>
-      <input id="q" name="q" type="search" value="{{ q }}" placeholder="제목, 저자 검색">
-      <input type="hidden" name="sort" value="{{ sort }}">
-    </form>
-    <form class="whoami" method="post" action="/logout">
-      <span>{{ user.username }}</span>
-      <button class="link-btn" type="submit">로그아웃</button>
-    </form>
-  </div>
-</header>
+{% set in_library = true %}
+{% include "_nav.html" %}
 
 <main id="main" class="wrap">
   <div class="page-head">
@@ -44,6 +32,7 @@
   {% if added %}<p class="notice" role="status">{{ added }}권을 서재에 넣었습니다.</p>{% endif %}
   {% for reason in reasons %}<p class="notice notice-warn" role="status">{{ reason }}</p>{% endfor %}
 
+  <div class="case">
   <ul class="shelf" aria-label="내 책 목록">
     {% for b in books %}
     <li class="book" style="--i: {{ [loop.index0, 11]|min }}">
@@ -65,10 +54,11 @@
     </li>
     {% else %}
     <li class="shelf-empty">
-      {% if q %}‘{{ q }}’에 맞는 책이 없습니다.{% else %}아직 꽂힌 책이 없습니다. ‘파일 올리기’로 PDF, DOCX, HWPX를 넣어 보세요. 이름이 나의책_표지.png, 나의책_내지.docx처럼 표지와 내지로 끝나는 파일을 함께 고르면 한 권으로 묶입니다.{% endif %}
+      <p>{% if q %}‘{{ q }}’에 맞는 책이 없습니다.{% else %}아직 꽂힌 책이 없습니다. ‘파일 올리기’로 PDF, DOCX, HWPX를 넣어 보세요. 이름이 나의책_표지.png, 나의책_내지.docx처럼 표지와 내지로 끝나는 파일을 함께 고르면 한 권으로 묶입니다.{% endif %}</p>
     </li>
     {% endfor %}
   </ul>
+  </div>
 </main>
 <div class="drop-hint" aria-hidden="true">파일을 놓으면 서재에 꽂힙니다</div>
 {% endblock %}

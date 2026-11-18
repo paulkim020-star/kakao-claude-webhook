@@ -6,6 +6,7 @@
 <main id="main" class="wrap detail">
   <div class="detail-cover">
     <span class="cover{% if not book.has_cover %} cover-plain c{{ book.id % 6 }}{% endif %}">
+      <span class="pages-edge" aria-hidden="true"></span>
       {% if book.has_cover %}
       <img src="/book/{{ book.id }}/cover" alt="{{ book.title }} 표지" width="240" height="360">
       {% else %}
