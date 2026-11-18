@@ -35,6 +35,15 @@ CREATE TABLE IF NOT EXISTS books (
     added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_books_user ON books(user_id);
+CREATE TABLE IF NOT EXISTS progress (          -- 리더에서 읽던 위치 (계정별, 책별)
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    chapter INTEGER NOT NULL DEFAULT 0,
+    ratio REAL NOT NULL DEFAULT 0,             -- 그 장 안에서 스크롤한 비율 0~1
+    percent REAL NOT NULL DEFAULT 0,           -- 책 전체 진행률 0~100
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, book_id)
+);
 """
 
 

@@ -132,7 +132,9 @@ def library(request: Request, q: str = "", sort: str = "recent", added: int = 0,
     if user is None:
         return _login_redirect()
     sort = sort if sort in SORTS else "recent"
-    sql = "SELECT * FROM books WHERE user_id = ?"
+    sql = ("SELECT books.*, COALESCE(progress.percent, 0) AS percent FROM books"
+           " LEFT JOIN progress ON progress.book_id = books.id AND progress.user_id = books.user_id"
+           " WHERE books.user_id = ?")
     params: list = [user["id"]]
     if q.strip():
         sql += " AND (title LIKE ? OR author LIKE ?)"
@@ -294,8 +296,11 @@ def book_page(request: Request, book_id: int):
         return _login_redirect()
     with get_conn() as conn:
         book = _own_book(conn, user["id"], book_id)
+        progress = conn.execute("SELECT percent FROM progress WHERE user_id = ? AND book_id = ?",
+                                (user["id"], book_id)).fetchone()
     return templates.TemplateResponse(request, "book.html", {
         "user": user, "book": book, "info": json.loads(book["meta_json"]),
+        "percent": round(progress["percent"]) if progress else 0,
         "converting": book["status"] == "converting",
     })
 

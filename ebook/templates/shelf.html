@@ -43,6 +43,7 @@
           {% else %}
           <span class="cover-title">{{ b.title }}</span>
           {% endif %}
+          {% if b.percent %}<span class="read-bar" role="img" aria-label="{{ b.percent|round|int }}% 읽음"><span style="--p: {{ b.percent|round(1) }}%"></span></span>{% endif %}
           {% if b.status == "converting" %}<span class="badge">변환 중</span>
           {% elif b.status == "failed" %}<span class="badge badge-warn">EPUB 없음</span>{% endif %}
         </span>

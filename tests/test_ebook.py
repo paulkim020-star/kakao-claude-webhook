@@ -7,7 +7,7 @@ import pymupdf
 import pytest
 from fastapi.testclient import TestClient
 
-from ebook import auth, convert, db, meta, pairing
+from ebook import auth, convert, db, meta, pairing, reader
 from ebook.app import app
 
 
@@ -435,3 +435,89 @@ def test_old_database_gets_new_columns(tmp_path):
     conn.close()
     cols = {r["name"] for r in db.get_conn().execute("PRAGMA table_info(books)")}
     assert {"source_type", "cover_source"} <= cols
+
+
+# ================================================================ 웹 EPUB 리더
+
+def test_reader_sanitizer_strips_scripts_events_and_unsafe_links():
+    from lxml import html as lxml_html
+    body = lxml_html.document_fromstring(
+        '<html><body>앞글<script>alert(1)</script><p onclick="x()" style="color:red">안녕'
+        '<a href="javascript:alert(1)">나쁜 링크</a><a href="https://example.com">좋은 링크</a></p>'
+        '<iframe src="//evil"></iframe><custom-tag>글자만 남음</custom-tag>'
+        '<img src="../../etc/passwd" onerror="x()"><!-- 주석 --></body></html>').body
+    out = reader._clean(body, "EPUB/chap_001.xhtml", {"EPUB/images/a.png"}, 1)
+    assert "<script" not in out and "alert(1)</" not in out and "onclick" not in out and "style=" not in out
+    assert "javascript:" not in out and "iframe" not in out and "<img" not in out and "주석" not in out
+    assert 'href="https://example.com"' in out and "글자만 남음" in out and "앞글" in out
+
+
+def test_reader_weights_follow_text_length():
+    chapters = [reader.Chapter("a", "", 100), reader.Chapter("b", "", 300)]
+    assert reader._weights(chapters) == [(0.0, 25.0), (25.0, 75.0)]
+
+
+def test_reader_reads_chapters_and_resumes(tmp_path):
+    client = signup()
+    upload(client, make_pdf(tmp_path / "a.pdf"))
+
+    res = client.get("/book/1/read", follow_redirects=False)  # 처음엔 첫 장으로
+    assert res.status_code == 303 and res.headers["location"] == "/book/1/read?c=0"
+    page = client.get("/book/1/read?c=0").text
+    assert "Body line 0 of chapter 1." in page and "1 / 2" in page and "다음 장" in page
+    assert "이전 장" not in page and "<script>alert" not in page
+    assert "Body line 0 of chapter 2." in client.get("/book/1/read?c=1").text
+    assert "다 읽었습니다" in client.get("/book/1/read?c=1").text
+    assert "Body line 0 of chapter 2." in client.get("/book/1/read?c=99").text  # 범위 밖은 마지막 장
+
+    saved = client.post("/book/1/progress", json={"chapter": 1, "ratio": 0.5, "percent": 75})
+    assert saved.status_code == 204
+    assert client.get("/book/1/read", follow_redirects=False).headers["location"] == "/book/1/read?c=1"
+    assert 'data-resume="0.5"' in client.get("/book/1/read?c=1").text
+    assert 'data-resume="0"' in client.get("/book/1/read?c=0").text  # 다른 장은 처음부터
+
+    assert "75% 읽음" in client.get("/library").text
+    assert "이어 읽기 · 75%" in client.get("/book/1").text
+    client.post("/book/1/progress", json={"chapter": 0, "ratio": 0.1, "percent": 5})  # 덮어쓰기
+    assert "5% 읽음" in client.get("/library").text
+
+
+def test_reader_progress_validation_and_isolation(tmp_path):
+    alice = signup("alice")
+    upload(alice, make_pdf(tmp_path / "a.pdf"))
+    assert alice.post("/book/1/progress", json={"chapter": 0, "ratio": 2, "percent": 10}).status_code == 422
+    assert alice.post("/book/1/progress", json={"chapter": -1, "ratio": 0, "percent": 10}).status_code == 422
+    bob = signup("bob")
+    assert bob.post("/book/1/progress", json={"chapter": 0, "ratio": 0, "percent": 1}).status_code == 404
+    assert bob.get("/book/1/read?c=0").status_code == 404
+    assert TestClient(app).post("/book/1/progress", json={"chapter": 0, "ratio": 0, "percent": 1}).status_code == 401
+    assert TestClient(app).get("/book/1/read", follow_redirects=False).headers["location"] == "/login"
+
+
+def test_reader_serves_images_only_from_own_epub(tmp_path):
+    alice = signup("alice")
+    upload_many(alice, [("b.docx", make_docx(tmp_path / "b.docx"))])
+    page = alice.get("/book/1/read?c=0").text  # 그림은 첫 장에 있다
+    assert "/book/1/asset/EPUB/images/img_1.png" in page
+    img = alice.get("/book/1/asset/EPUB/images/img_1.png")
+    assert img.status_code == 200 and img.headers["content-type"] == "image/png" and img.content[:4] == b"\x89PNG"
+    assert alice.get("/book/1/asset/EPUB/chap_001.xhtml").status_code == 404  # 그림이 아닌 파일
+    assert alice.get("/book/1/asset/EPUB/images/../../../../etc/passwd").status_code == 404
+    assert signup("bob").get("/book/1/asset/EPUB/images/img_1.png").status_code == 404
+
+
+def test_reader_unavailable_without_epub(tmp_path):
+    client = signup()
+    upload(client, make_pdf(tmp_path / "s.pdf", scanned=True))
+    res = client.get("/book/1/read?c=0", follow_redirects=False)
+    assert res.status_code == 303 and res.headers["location"] == "/book/1"
+    assert "읽기" not in client.get("/book/1").text.split("파일 속성")[0].replace("서재에서", "")
+
+
+def test_reader_shows_hwpx_and_docx_books(tmp_path):
+    client = signup()
+    upload_many(client, [("h.hwpx", make_hwpx(tmp_path / "h.hwpx"))])
+    page = client.get("/book/1/read?c=0").text
+    assert "<h1>첫째 장</h1>" in page and "본문 한 줄입니다." in page and "셀가" in page
+    assert "/book/1/asset/EPUB/images/img_1.png" in page
+    assert "둘째 본문입니다." in client.get("/book/1/read?c=1").text

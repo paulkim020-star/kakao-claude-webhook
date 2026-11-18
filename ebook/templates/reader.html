@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ book.title }} · 읽기</title>
+  <script>
+    /* 깜빡임 방지: 저장된 보기 설정을 화면이 그려지기 전에 적용한다 */
+    try {
+      var s = JSON.parse(localStorage.getItem("ebook.reader") || "{}"), d = document.documentElement;
+      if (s.theme) d.dataset.theme = s.theme;
+      if (s.font) d.dataset.font = s.font;
+      if (s.size) d.style.setProperty("--rfs", s.size + "px");
+      if (s.lh) d.style.setProperty("--rlh", s.lh);
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/reader.css">
+  <script src="/static/reader.js" defer></script>
+</head>
+<body class="reader" data-book="{{ book.id }}" data-chapter="{{ index }}" data-total="{{ total }}"
+      data-start="{{ start }}" data-span="{{ span }}" data-resume="{{ resume }}">
+  <a class="skip" href="#main">본문으로 건너뛰기</a>
+
+  <div class="r-progress" aria-hidden="true"><span id="r-fill"></span></div>
+
+  <header class="r-bar" id="bar">
+    <a class="r-btn" href="/book/{{ book.id }}">← 책 정보</a>
+    <p class="r-title"><strong>{{ book.title }}</strong></p>
+    <span class="r-percent" id="r-percent" aria-live="off"></span>
+    <button class="r-btn" id="toc-btn" type="button" aria-expanded="false" aria-controls="toc">목차</button>
+    <button class="r-btn" id="set-btn" type="button" aria-expanded="false" aria-controls="settings">글자 설정</button>
+  </header>
+
+  <main id="main">
+    <article class="prose" id="prose">
+      <p class="eyebrow">{{ index + 1 }} / {{ total }}</p>
+      {{ chapter.html|safe }}
+    </article>
+
+    <nav class="r-pager" aria-label="장 이동">
+      {% if index > 0 %}
+      <a class="btn" href="/book/{{ book.id }}/read?c={{ index - 1 }}" rel="prev">이전 장</a>
+      {% else %}<span></span>{% endif %}
+      {% if index < total - 1 %}
+      <a class="btn btn-primary" href="/book/{{ book.id }}/read?c={{ index + 1 }}" rel="next">다음 장</a>
+      {% else %}
+      <a class="btn btn-primary" href="/library">다 읽었습니다. 서재로</a>
+      {% endif %}
+    </nav>
+  </main>
+
+  <aside class="drawer" id="toc" aria-label="목차" inert>
+    <h2>목차</h2>
+    <ol>
+      {% for title in chapters %}
+      <li><a href="/book/{{ book.id }}/read?c={{ loop.index0 }}"{% if loop.index0 == index %} aria-current="true"{% endif %}>{{ title }}</a></li>
+      {% endfor %}
+    </ol>
+  </aside>
+
+  <section class="popover" id="settings" aria-label="글자 설정" inert>
+    <div class="set-row">
+      <span class="set-label">바탕</span>
+      <div class="seg" role="group" aria-label="바탕 색">
+        <button type="button" data-set="theme" data-value="paper" aria-pressed="false"><i class="sw sw-paper"></i>종이</button>
+        <button type="button" data-set="theme" data-value="sepia" aria-pressed="false"><i class="sw sw-sepia"></i>세피아</button>
+        <button type="button" data-set="theme" data-value="dark" aria-pressed="false"><i class="sw sw-dark"></i>어둠</button>
+      </div>
+    </div>
+    <div class="set-row">
+      <span class="set-label">글꼴</span>
+      <div class="seg" role="group" aria-label="글꼴">
+        <button type="button" data-set="font" data-value="serif" aria-pressed="false">명조</button>
+        <button type="button" data-set="font" data-value="sans" aria-pressed="false">고딕</button>
+      </div>
+    </div>
+    <div class="set-row">
+      <span class="set-label">크기</span>
+      <div class="stepper">
+        <button type="button" id="size-down" aria-label="글자 작게">가−</button>
+        <output id="size-out"></output>
+        <button type="button" id="size-up" aria-label="글자 크게">가+</button>
+      </div>
+    </div>
+    <div class="set-row">
+      <span class="set-label">줄 간격</span>
+      <div class="seg" role="group" aria-label="줄 간격">
+        <button type="button" data-set="lh" data-value="1.6" aria-pressed="false">좁게</button>
+        <button type="button" data-set="lh" data-value="1.85" aria-pressed="false">보통</button>
+        <button type="button" data-set="lh" data-value="2.15" aria-pressed="false">넓게</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="scrim" id="scrim"></div>
+</body>
+</html>

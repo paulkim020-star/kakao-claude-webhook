@@ -224,6 +224,11 @@ a { color: var(--accent); }
 .c0 { background: #2f5d50; } .c1 { background: #8a4b2f; } .c2 { background: #2d4a63; }
 .c3 { background: #6b5a2e; } .c4 { background: #7a2f3a; } .c5 { background: #3b4a3e; }
 
+.read-bar { /* 읽은 만큼 표지 아래에 차오르는 선 */
+  position: absolute; z-index: 2; inset: auto 0 0 0; height: 5px; background: rgba(0, 0, 0, 0.45);
+}
+.read-bar span { display: block; height: 100%; width: var(--p); background: #8cc4b0; }
+
 .badge {
   position: absolute; left: var(--space-2); bottom: var(--space-2); z-index: 2;
   padding: 2px var(--space-2); border-radius: var(--radius);

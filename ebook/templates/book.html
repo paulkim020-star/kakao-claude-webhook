@@ -27,7 +27,8 @@
 
     <div class="actions">
       {% if book.status == "ready" %}
-      <a class="btn btn-primary" href="/book/{{ book.id }}/epub">EPUB 받기</a>
+      <a class="btn btn-primary" href="/book/{{ book.id }}/read">{{ "이어 읽기 · " ~ percent ~ "%" if percent else "읽기" }}</a>
+      <a class="btn" href="/book/{{ book.id }}/epub">EPUB 받기</a>
       {% endif %}
       <a class="btn" href="/book/{{ book.id }}/source">내지 원본({{ book.source_type|upper }}) 받기</a>
       <form method="post" action="/book/{{ book.id }}/delete" data-confirm="‘{{ book.title }}’을(를) 서재에서 지울까요? 원본 파일과 EPUB이 함께 삭제됩니다.">
