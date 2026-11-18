@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}내 서재 · PDF 서재{% endblock %}
+{% block body %}
+{% set in_library = true %}
+{% include "_nav.html" %}
+
+<main id="main" class="wrap">
+  <div class="page-head">
+    <div>
+      <h1>내 서재</h1>
+      <p class="count">{% if q %}‘{{ q }}’ 검색 결과 {{ books|length }}권{% else %}{{ books|length }}권{% endif %}</p>
+    </div>
+    <div class="page-actions">
+      <form method="get" action="/library" class="sort">
+        <label class="sr" for="sort">정렬</label>
+        <select id="sort" name="sort" data-autosubmit>
+          {% for key, (label, _) in sorts.items() %}
+          <option value="{{ key }}" {% if key == sort %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+        <noscript><button class="btn" type="submit">적용</button></noscript>
+      </form>
+      <form id="upload-form" method="post" action="/upload" enctype="multipart/form-data">
+        <input id="file-input" class="sr" type="file" name="files" accept=".pdf,.docx,.hwp,.hwpx,image/*" multiple required>
+        <label class="btn btn-primary" for="file-input" tabindex="0" role="button">파일 올리기</label>
+      </form>
+      <a class="btn" href="/new">표지·내지로 만들기</a>
+    </div>
+  </div>
+
+  {% if added %}<p class="notice" role="status">{{ added }}권을 서재에 넣었습니다.</p>{% endif %}
+  {% for reason in reasons %}<p class="notice notice-warn" role="status">{{ reason }}</p>{% endfor %}
+
+  <div class="case">
+  <ul class="shelf" aria-label="내 책 목록">
+    {% for b in books %}
+    <li class="book" style="--i: {{ [loop.index0, 11]|min }}">
+      <a class="book-link" href="/book/{{ b.id }}">
+        <span class="cover{% if not b.has_cover %} cover-plain c{{ b.id % 6 }}{% endif %}">
+          {% if b.has_cover %}
+          <img src="/book/{{ b.id }}/cover" alt="{{ b.title }} 표지" width="160" height="240" loading="lazy">
+          {% else %}
+          <span class="cover-title">{{ b.title }}</span>
+          {% endif %}
+          {% if b.percent %}<span class="read-bar" role="img" aria-label="{{ b.percent|round|int }}% 읽음"><span style="--p: {{ b.percent|round(1) }}%"></span></span>{% endif %}
+          {% if b.status == "converting" %}<span class="badge">변환 중</span>
+          {% elif b.status == "failed" %}<span class="badge badge-warn">EPUB 없음</span>{% endif %}
+        </span>
+        <span class="label">
+          <strong>{{ b.title }}</strong>
+          <span>{{ b.author or "저자 정보 없음" }}</span>
+        </span>
+      </a>
+    </li>
+    {% else %}
+    <li class="shelf-empty">
+      <p>{% if q %}‘{{ q }}’에 맞는 책이 없습니다.{% else %}아직 꽂힌 책이 없습니다. ‘파일 올리기’로 PDF, DOCX, HWP, HWPX를 넣어 보세요. 이름이 나의책_표지.png, 나의책_내지.docx처럼 표지와 내지로 끝나는 파일을 함께 고르면 한 권으로 묶입니다.{% endif %}</p>
+    </li>
+    {% endfor %}
+  </ul>
+  </div>
+</main>
+<div class="drop-hint" aria-hidden="true">파일을 놓으면 서재에 꽂힙니다</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}PDF 서재{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body{% if converting %} data-converting{% endif %}>
+  <a class="skip" href="#main">본문으로 건너뛰기</a>
+  {% block body %}{% endblock %}
+</body>
+</html>
