@@ -34,18 +34,15 @@
         <noscript><button class="btn" type="submit">적용</button></noscript>
       </form>
       <form id="upload-form" method="post" action="/upload" enctype="multipart/form-data">
-        <input id="file-input" class="sr" type="file" name="files" accept="application/pdf,.pdf" multiple required>
-        <label class="btn btn-primary" for="file-input" tabindex="0" role="button">PDF 올리기</label>
+        <input id="file-input" class="sr" type="file" name="files" accept=".pdf,.docx,.hwpx,image/*" multiple required>
+        <label class="btn btn-primary" for="file-input" tabindex="0" role="button">파일 올리기</label>
       </form>
+      <a class="btn" href="/new">표지·내지로 만들기</a>
     </div>
   </div>
 
-  {% if added or skipped %}
-  <p class="notice" role="status">
-    {% if added %}{{ added }}권을 서재에 넣었습니다.{% endif %}
-    {% if skipped %}PDF가 아니거나 열 수 없는 파일 {{ skipped }}개는 넣지 못했습니다.{% endif %}
-  </p>
-  {% endif %}
+  {% if added %}<p class="notice" role="status">{{ added }}권을 서재에 넣었습니다.</p>{% endif %}
+  {% for reason in reasons %}<p class="notice notice-warn" role="status">{{ reason }}</p>{% endfor %}
 
   <ul class="shelf" aria-label="내 책 목록">
     {% for b in books %}
@@ -68,10 +65,10 @@
     </li>
     {% else %}
     <li class="shelf-empty">
-      {% if q %}‘{{ q }}’에 맞는 책이 없습니다.{% else %}아직 꽂힌 책이 없습니다. 위의 ‘PDF 올리기’로 첫 책을 넣어 보세요. 여러 권을 한꺼번에 고를 수 있고, 창에 끌어다 놓아도 됩니다.{% endif %}
+      {% if q %}‘{{ q }}’에 맞는 책이 없습니다.{% else %}아직 꽂힌 책이 없습니다. ‘파일 올리기’로 PDF, DOCX, HWPX를 넣어 보세요. 이름이 나의책_표지.png, 나의책_내지.docx처럼 표지와 내지로 끝나는 파일을 함께 고르면 한 권으로 묶입니다.{% endif %}
     </li>
     {% endfor %}
   </ul>
 </main>
-<div class="drop-hint" aria-hidden="true">PDF를 놓으면 서재에 꽂힙니다</div>
+<div class="drop-hint" aria-hidden="true">파일을 놓으면 서재에 꽂힙니다</div>
 {% endblock %}

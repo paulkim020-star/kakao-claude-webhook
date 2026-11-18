@@ -18,11 +18,14 @@ skill response JSON format (`simpleText`) and returned.
 - `matjib/` - 맛집찾기 앱(진짜맛집) 웹 프로토타입 (`/matjib`). 목업 데이터로
   교차검증 점수 산식(`engine.py`)과 화면 흐름(홈/리스트/상세)을 검증하는 단계.
   실제 API 연동 전이며, 기획 배경은 `docs/맛집찾기앱-기획안.md` 참고.
-- `ebook/` - PDF 서재: PDF를 EPUB으로 변환해 계정별 책장(표지 진열)에 보관하는
-  오프라인 데스크탑 앱. 웹훅 서버와 별개로 `python -m ebook` (기본 127.0.0.1:8765)
-  로 실행. 로컬 계정(scrypt+서명 쿠키), PDF 속성/표지 추출(`meta.py`), PyMuPDF+EbookLib
-  변환(`convert.py`), 아카이브는 `EBOOK_DATA_DIR`(기본 `ebook_data/`)에 원본 PDF·EPUB·
-  표지·meta.json 저장. 의존성은 `ebook/requirements.txt`. 스캔본(OCR)은 미지원.
+- `ebook/` - PDF 서재: 표지(이미지/PDF) + 내지(PDF/DOCX/HWPX)를 EPUB으로 변환해 계정별
+  책장(표지 진열)에 보관하는 오프라인 데스크탑 앱. 웹훅 서버와 별개로
+  `python -m ebook` (기본 127.0.0.1:8765)로 실행. 로컬 계정(scrypt+서명 쿠키),
+  파일 판별·속성·표지(`meta.py`), 내지→EPUB(`convert.py`: PDF=PyMuPDF, DOCX=mammoth,
+  HWPX=`hwpx.py`), 파일명의 "표지"/"내지"로 짝 맞추기(`pairing.py`). 아카이브는
+  `EBOOK_DATA_DIR`(기본 `ebook_data/`)에 원본 내지·원본 표지·표지 PNG·EPUB·meta.json 저장.
+  의존성은 `ebook/requirements.txt`, 샘플은 `ebook/samples/`. 스캔본(OCR)과 옛 .hwp/.doc는 미지원.
+  HWPX 파서는 한컴 구조를 흉내 낸 테스트 파일로만 검증됨 - 실제 한글 파일로 확인 필요.
 - `tests/` - pytest 테스트 (슬롯 계산, 예약 충돌, 웹 플로우, 맛집 점수/영업상태).
 - `requirements.txt` - pinned dependencies (fastapi, uvicorn, anthropic, httpx,
   python-dotenv, jinja2, python-multipart).

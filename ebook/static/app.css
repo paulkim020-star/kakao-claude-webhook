@@ -245,3 +245,20 @@ body.dragging .drop-hint { opacity: 1; }
   .sort select { width: 100%; }
   .actions .btn { flex: 1 1 100%; }
 }
+
+/* 표지·내지로 만들기 */
+.compose { max-width: 640px; padding-block: var(--space-5); }
+.compose h1 { font-size: clamp(26px, 3.6vw, 36px); }
+.compose .lead { margin-bottom: var(--space-4); }
+.compose-form { display: grid; gap: var(--space-4); }
+.field { display: grid; gap: var(--space-1); }
+.field label { font-weight: 600; }
+.field .opt { color: var(--muted); font-weight: 400; font-size: 14px; }
+.field input[type="text"], .field input[type="file"] {
+  min-height: 44px; padding: 9px var(--space-3); width: 100%;
+  border: 1px solid var(--ink); border-radius: var(--radius); background: var(--surface);
+  color: var(--ink); font: inherit;
+}
+.hint { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.tip { margin-top: var(--space-5); padding-top: var(--space-3); border-top: 1px solid var(--line); }
+@media (max-width: 720px) { .compose-form .btn { width: 100%; } }

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}표지·내지로 만들기 · PDF 서재{% endblock %}
+{% block body %}
+{% include "_nav.html" %}
+<main id="main" class="wrap compose">
+  <h1>표지·내지로 만들기</h1>
+  <p class="lead">디자인한 표지와 본문 파일을 따로 받아 한 권의 EPUB으로 묶습니다.</p>
+
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+
+  <form method="post" action="/new" enctype="multipart/form-data" class="compose-form">
+    <div class="field">
+      <label for="cover">표지 <span class="opt">선택</span></label>
+      <input id="cover" name="cover" type="file" accept="image/*,.pdf">
+      <p class="hint">이미지(PNG, JPG, WEBP)나 PDF. PDF는 첫 쪽을 표지로 씁니다. 비워 두면 내지가 PDF일 때 내지의 첫 쪽이 표지가 됩니다.</p>
+    </div>
+    <div class="field">
+      <label for="interior">내지</label>
+      <input id="interior" name="interior" type="file" accept=".pdf,.docx,.hwpx" required>
+      <p class="hint">PDF, 워드(DOCX), 한글(HWPX). 한글 파일이 .hwp라면 ‘다른 이름으로 저장’에서 HWPX나 PDF를 고르세요.</p>
+    </div>
+    <div class="field">
+      <label for="title">제목 <span class="opt">선택</span></label>
+      <input id="title" name="title" type="text" value="{{ form.title or '' }}" maxlength="120">
+    </div>
+    <div class="field">
+      <label for="author">저자 <span class="opt">선택</span></label>
+      <input id="author" name="author" type="text" value="{{ form.author or '' }}" maxlength="80">
+      <p class="hint">제목과 저자를 비우면 파일 속성에서 가져오고, 속성이 없으면 파일 이름을 씁니다.</p>
+    </div>
+    <button class="btn btn-primary" type="submit">책 만들기</button>
+  </form>
+
+  <p class="hint tip">여러 권을 한꺼번에 올릴 때는 서재의 ‘파일 올리기’에서 <strong>나의책_표지.png</strong>와 <strong>나의책_내지.docx</strong>처럼 이름 앞부분을 같게 하고 끝을 표지/내지로 맞추면 자동으로 짝이 지어집니다.</p>
+</main>
+{% endblock %}
